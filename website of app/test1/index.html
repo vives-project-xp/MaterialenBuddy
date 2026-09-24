@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MaterialenBuddy</title>
+    <style>
+      body { font-family: Arial, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; }
+      button { display: block; width: 100%; margin: 10px 0; padding: 14px; font-size: 1rem; cursor: pointer; }
+      #status { margin-top: 24px; padding: 16px; background: #f1f5f9; border-radius: 6px; }
+      .error { color: #b91c1c; }
+    </style>
+  </head>
+  <body>
+    <h1>MaterialenBuddy</h1>
+    <p>Kies een bestemming voor de Create 3.</p>
+    <main id="locations">Locaties laden...</main>
+    <div id="status" aria-live="polite">Nog geen navigatie gestart.</div>
+
+    <script>
+      const locationsElement = document.querySelector("#locations");
+      const statusElement = document.querySelector("#status");
+
+      async function loadLocations() {
+        const response = await fetch("/locations");
+        if (!response.ok) throw new Error("Locaties konden niet worden geladen.");
+        const locations = await response.json();
+        locationsElement.replaceChildren(...locations.map((location) => {
+          const button = document.createElement("button");
+          button.textContent = location.naam;
+          button.addEventListener("click", () => navigate(location.id));
+          return button;
+        }));
+      }
+
+      async function navigate(locationId) {
+        statusElement.className = "";
+        statusElement.textContent = "Navigatie starten...";
+        try {
+          const response = await fetch("/navigate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ location_id: locationId }),
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.detail || "Navigatie mislukt.");
+          statusElement.textContent = result.message;
+          pollStatus(result.job_id);
+        } catch (error) {
+          statusElement.textContent = error.message;
+          statusElement.className = "error";
+        }
+      }
+
+      async function pollStatus(jobId) {
+        const response = await fetch(`/status/${jobId}`);
+        const result = await response.json();
+        statusElement.textContent = result.message;
+        if (result.status === "onderweg") window.setTimeout(() => pollStatus(jobId), 300);
+      }
+
+      loadLocations().catch((error) => {
+        statusElement.textContent = error.message;
+        statusElement.className = "error";
+      });
+    </script>
+  </body>
+</html>

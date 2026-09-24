@@ -1,0 +1,5 @@
+[
+  {"id": "magazijn", "naam": "Magazijn", "x": 0.0, "y": 0.0, "yaw": null},
+  {"id": "werkbank", "naam": "Werkbank", "x": 0.0, "y": 20.0, "yaw": null},
+  {"id": "uitgifte", "naam": "Uitgifte", "x": 10.0, "y": 30.0, "yaw": null}
+]
