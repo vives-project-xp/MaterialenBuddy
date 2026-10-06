@@ -53,7 +53,7 @@ def find_waypoint(location_id: str) -> dict[str, Any]:
         None,
     )
     if waypoint is None:
-        raise HTTPException(status_code=404, detail="Onbekende locatie")
+        raise HTTPException(status_code=404, detail="Unknown location")
     return waypoint
 
 
@@ -73,7 +73,7 @@ async def robot_info() -> dict[str, str]:
         "ip": CREATE3_IP,
         "mode": CREATE3_MODE,
         "sdk": "irobot-edu-sdk",
-        "message": "Bluetooth-navigatie actief." if CREATE3_MODE == "bluetooth" else "Mocknavigatie actief.",
+        "message": "Bluetooth navigation active." if CREATE3_MODE == "bluetooth" else "Mock navigation active.",
     }
 
 
@@ -81,9 +81,9 @@ async def run_navigation(job_id: str, waypoint: dict[str, Any]) -> None:
     process: asyncio.subprocess.Process | None = None
     jobs[job_id] = NavigationStatus(
         job_id=job_id,
-        status="onderweg",
+        status="en route",
         location_id=waypoint["id"],
-        message=f"Onderweg naar {waypoint['naam']}...",
+        message=f"En route to {waypoint['name']}...",
     )
     try:
         if CREATE3_MODE == "mock":
@@ -103,16 +103,16 @@ async def run_navigation(job_id: str, waypoint: dict[str, Any]) -> None:
             except asyncio.TimeoutError as error:
                 process.kill()
                 await process.wait()
-                raise RuntimeError("Navigatie timeout na 60 seconden.") from error
+                raise RuntimeError("Navigation timed out after 60 seconds.") from error
             if return_code != 0:
-                raise RuntimeError(f"Bluetooth-navigatie stopte met code {return_code}.")
+                raise RuntimeError(f"Bluetooth navigation stopped with code {return_code}.")
         else:
-            raise RuntimeError("Onbekende CREATE3_MODE. Gebruik mock of bluetooth.")
+            raise RuntimeError("Unknown CREATE3_MODE. Use mock or bluetooth.")
         jobs[job_id] = NavigationStatus(
             job_id=job_id,
-            status="aangekomen",
+            status="arrived",
             location_id=waypoint["id"],
-            message=f"Aangekomen bij {waypoint['naam']}.",
+            message=f"Arrived at {waypoint['name']}.",
         )
     except asyncio.CancelledError:
         if process is not None and process.returncode is None:
@@ -120,15 +120,15 @@ async def run_navigation(job_id: str, waypoint: dict[str, Any]) -> None:
             await process.wait()
         jobs[job_id] = NavigationStatus(
             job_id=job_id,
-            status="geannuleerd",
+            status="cancelled",
             location_id=waypoint["id"],
-            message="Navigatie geannuleerd.",
+            message="Navigation cancelled.",
         )
         raise
     except Exception as error:
         jobs[job_id] = NavigationStatus(
             job_id=job_id,
-            status="fout",
+            status="error",
             location_id=waypoint["id"],
             message=str(error),
         )
@@ -145,9 +145,9 @@ async def navigate(request: NavigateRequest) -> NavigationStatus:
     job_id = str(uuid.uuid4())
     jobs[job_id] = NavigationStatus(
         job_id=job_id,
-        status="gestart",
+        status="started",
         location_id=waypoint["id"],
-        message=f"Navigatie naar {waypoint['naam']} gestart.",
+        message=f"Navigation to {waypoint['name']} started.",
     )
     task = asyncio.create_task(run_navigation(job_id, waypoint))
     active_task = task
@@ -161,5 +161,5 @@ async def navigate(request: NavigateRequest) -> NavigationStatus:
 @app.get("/status/{job_id}", response_model=NavigationStatus)
 async def status(job_id: str) -> NavigationStatus:
     if job_id not in jobs:
-        raise HTTPException(status_code=404, detail="Onbekende navigatiejob")
+        raise HTTPException(status_code=404, detail="Unknown navigation job")
     return jobs[job_id]

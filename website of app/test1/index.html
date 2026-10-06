@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="nl">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -13,9 +13,9 @@
   </head>
   <body>
     <h1>MaterialenBuddy</h1>
-    <p>Kies een bestemming voor de Create 3.</p>
-    <main id="locations">Locaties laden...</main>
-    <div id="status" aria-live="polite">Nog geen navigatie gestart.</div>
+    <p>Choose a destination for the Create 3.</p>
+    <main id="locations">Loading locations...</main>
+    <div id="status" aria-live="polite">No navigation started yet.</div>
 
     <script>
       const locationsElement = document.querySelector("#locations");
@@ -23,11 +23,11 @@
 
       async function loadLocations() {
         const response = await fetch("/locations");
-        if (!response.ok) throw new Error("Locaties konden niet worden geladen.");
+        if (!response.ok) throw new Error("Locations could not be loaded.");
         const locations = await response.json();
         locationsElement.replaceChildren(...locations.map((location) => {
           const button = document.createElement("button");
-          button.textContent = location.naam;
+          button.textContent = location.name;
           button.addEventListener("click", () => navigate(location.id));
           return button;
         }));
@@ -35,7 +35,7 @@
 
       async function navigate(locationId) {
         statusElement.className = "";
-        statusElement.textContent = "Navigatie starten...";
+        statusElement.textContent = "Starting navigation...";
         try {
           const response = await fetch("/navigate", {
             method: "POST",
@@ -43,7 +43,7 @@
             body: JSON.stringify({ location_id: locationId }),
           });
           const result = await response.json();
-          if (!response.ok) throw new Error(result.detail || "Navigatie mislukt.");
+          if (!response.ok) throw new Error(result.detail || "Navigation failed.");
           statusElement.textContent = result.message;
           pollStatus(result.job_id);
         } catch (error) {
@@ -56,7 +56,7 @@
         const response = await fetch(`/status/${jobId}`);
         const result = await response.json();
         statusElement.textContent = result.message;
-        if (result.status === "onderweg") window.setTimeout(() => pollStatus(jobId), 300);
+        if (result.status === "en route") window.setTimeout(() => pollStatus(jobId), 300);
       }
 
       loadLocations().catch((error) => {

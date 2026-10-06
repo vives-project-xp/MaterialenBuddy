@@ -10,10 +10,10 @@ robot = Create3(Bluetooth(robot_name))
 
 @event(robot.when_play)
 async def play(robot: Create3) -> None:
-    print("Bluetooth verbonden. De robot rijdt 10 cm vooruit en daarna terug.")
+    print("Bluetooth connected. The robot drives 10 cm forward and then back.")
     await robot.navigate_to(10, 0)
     await robot.navigate_to(0, 0)
-    print("Proefrit voltooid.")
+    print("Test ride complete.")
 
 
 robot.play()

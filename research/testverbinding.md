@@ -1,100 +1,100 @@
-# Test voor het verbinden en besturen van de Create 3 via bluethooth
-dit is een handleiding van een test om te proberen de **iRobot Create 3** te bestuen met bluethooth
-Het doel van deze test is eenvoudig:
+# Test for connecting to and controlling the Create 3 via Bluetooth
+This is a guide for a test to try to control the **iRobot Create 3** with Bluetooth
+The goal of this test is simple:
 
-**Je drukt op Run in VS Code → de robot rijdt 3 seconden vooruit → de robot stopt.**
+**You press Run in VS Code → the robot drives forward for 3 seconds → the robot stops.**
 
-Voor deze test heb je geen ROS 2, WSL of Wi-Fi nodig.
+For this test you do not need ROS 2, WSL, or Wi-Fi.
 
 ---
 
-## 1. Wat heb je nodig?
+## 1. What do you need?
 
-Voor deze test heb je nodig:
+For this test you need:
 
-* Een Windows-pc
+* A Windows PC
 * Visual Studio Code
-* Een iRobot Create 3
-* Bluetooth op de pc
-* Internetverbinding tijdens de installatie
+* An iRobot Create 3
+* Bluetooth on the PC
+* Internet connection during installation
 * Python 3.11
 
-De Create 3 wordt uiteindelijk rechtstreeks vanuit Python via Bluetooth bestuurd.
+The Create 3 is ultimately controlled directly from Python via Bluetooth.
 
-De verbinding ziet er zo uit:
+The connection looks like this:
 
 **VS Code → Python → Bluetooth → Create 3**
 
 ---
 
-## 2. Python 3.11 installeren
+## 2. Installing Python 3.11
 
-Voor deze test gebruiken we Python 3.11.
+For this test we use Python 3.11.
 
-Open **PowerShell** en typ:
+Open **PowerShell** and type:
 
 ```powershell
 py -3.11 --version
 ```
 
-Als Python 3.11 geïnstalleerd is, krijg je bijvoorbeeld:
+If Python 3.11 is installed, you will get for example:
 
 ```text
 Python 3.11.9
 ```
 
-Als je een foutmelding krijgt dat Python 3.11 niet gevonden wordt, moet Python 3.11 eerst geïnstalleerd worden.
+If you get an error message that Python 3.11 cannot be found, Python 3.11 must first be installed.
 
-> Let op: als er al een andere Python-versie op de computer staat, hoef je die niet te verwijderen. Verschillende Python-versies kunnen naast elkaar bestaan.
+> Note: if another Python version is already installed on the computer, you do not need to remove it. Different Python versions can coexist.
 
 ---
 
-## 3. Een projectmap maken
+## 3. Creating a project folder
 
-Maak bijvoorbeeld op het bureaublad een nieuwe map:
+Create a new folder on the desktop for example:
 
 ```text
 Create3
 ```
 
-Open deze map vervolgens in **Visual Studio Code**.
+Then open this folder in **Visual Studio Code**.
 
 ---
 
-## 4. Een virtual environment maken
+## 4. Creating a virtual environment
 
 Open in VS Code:
 
 **Terminal → New Terminal**
 
-Typ:
+Type:
 
 ```powershell
 py -3.11 -m venv .venv
 ```
 
-Hierdoor wordt in de projectmap een aparte Python-omgeving gemaakt.
+This creates a separate Python environment in the project folder.
 
-Je krijgt nu bijvoorbeeld:
+You will now get for example:
 
 ```text
 Create3
 ├── .venv
 ```
 
-Deze `.venv` zorgt ervoor dat de programma's en pakketten voor dit project apart blijven van andere Python-projecten.
+This `.venv` ensures that the programs and packages for this project stay separate from other Python projects.
 
 ---
 
-## 5. De virtual environment activeren
+## 5. Activating the virtual environment
 
-Typ in dezelfde terminal:
+Type in the same terminal:
 
 ```powershell
 .venv\Scripts\Activate.ps1
 ```
 
-Als dit gelukt is, begint de terminal met:
+If this succeeds, the terminal starts with:
 
 ```text
 (.venv)
@@ -102,29 +102,29 @@ Als dit gelukt is, begint de terminal met:
 
 ---
 
-## 6. De iRobot Python SDK installeren
+## 6. Installing the iRobot Python SDK
 
-De Python SDK is de software waarmee Python met de Create 3 kan communiceren.
+The Python SDK is the software that allows Python to communicate with the Create 3.
 
-Installeer deze met:
+Install it with:
 
 ```powershell
 pip install irobot-edu-sdk
 ```
 
-Wacht tot de installatie volledig klaar is.
+Wait until the installation is completely done.
 
 ---
 
-## 7. Een Python-bestand maken
+## 7. Creating a Python file
 
-Maak in VS Code een nieuw bestand met de naam:
+Create a new file in VS Code with the name:
 
 ```text
-besturing.py
+control.py
 ```
 
-Zet daarin:
+Put in it:
 
 ```python
 from irobot_edu_sdk.backend.bluetooth import Bluetooth
@@ -141,35 +141,35 @@ async def play(robot):
 robot.play()
 ```
 
-### Wat doet deze code?
+### What does this code do?
 
-Deze regel maakt een Bluetooth-verbinding:
+This line creates a Bluetooth connection:
 
 ```python
 robot = Root(Bluetooth())
 ```
 
-Daarna wordt de functie gestart wanneer het programma begint:
+Then the function is started when the program begins:
 
 ```python
 @event(robot.when_play)
 ```
 
-Deze regel laat beide wielen met snelheid 20 draaien:
+This line makes both wheels turn at speed 20:
 
 ```python
 await robot.set_wheel_speeds(20, 20)
 ```
 
-Omdat beide wielen dezelfde snelheid hebben, rijdt de robot vooruit.
+Because both wheels have the same speed, the robot drives forward.
 
-Daarna wacht Python 3 seconden:
+Then Python waits 3 seconds:
 
 ```python
 await robot.wait(3)
 ```
 
-En uiteindelijk worden beide wielen gestopt:
+And finally both wheels are stopped:
 
 ```python
 await robot.set_wheel_speeds(0, 0)
@@ -177,57 +177,57 @@ await robot.set_wheel_speeds(0, 0)
 
 ---
 
-## 8. De Create 3 klaarmaken
+## 8. Preparing the Create 3
 
-Zet de Create 3 aan.
+Turn on the Create 3.
 
-Zorg ervoor dat:
+Make sure that:
 
-* de robot ingeschakeld is;
-* Bluetooth beschikbaar is;
-* niemand anders met de robot verbonden is;
-* er voldoende vrije ruimte vóór de robot is.
+* the robot is turned on;
+* Bluetooth is available;
+* no one else is connected to the robot;
+* there is sufficient free space in front of the robot.
 
-Zet de robot bijvoorbeeld op de vloer met enkele meters vrije ruimte ervoor.
+Place the robot, for example, on the floor with a few meters of free space in front of it.
 
-Je hoeft voor deze test **niet** verbonden te zijn met het Wi-Fi-netwerk van de robot.
+You do **not** need to be connected to the robot's Wi-Fi network for this test.
 
-Je hoeft de robot ook niet eerst handmatig toe te voegen via de gewone Windows Bluetooth-instellingen. De iRobot Python SDK zoekt de robot zelf via Bluetooth.
+You also do not need to first add the robot manually via the regular Windows Bluetooth settings. The iRobot Python SDK finds the robot itself via Bluetooth.
 
 ---
 
-## 9. Het programma uitvoeren
+## 9. Running the program
 
-Je kunt het programma rechtstreeks vanuit VS Code starten.
+You can start the program directly from VS Code.
 
-Open `besturing.py` en klik rechtsboven op:
+Open `control.py` and click in the top right on:
 
 **▶ Run Python File**
 
-Je kunt het ook vanuit de terminal starten:
+You can also start it from the terminal:
 
 ```powershell
-python besturing.py
+python control.py
 ```
 
-In de terminal verschijnt bijvoorbeeld:
+In the terminal, for example, appears:
 
 ```text
 Run event loop.
 Connecting to iRobot-XXXXXXXX
 ```
 
-Als de verbinding gelukt is, wordt de code uitgevoerd.
+If the connection succeeded, the code is executed.
 
-De robot zal dan:
+The robot will then:
 
-**3 seconden vooruit rijden → stoppen.**
+**Drive forward for 3 seconds → stop.**
 
 ---
 
-## 10. Als het werkt
+## 10. If it works
 
-Als alles goed gaat, heb je nu een werkende verbinding:
+If everything goes well, you now have a working connection:
 
 ```text
 Visual Studio Code
@@ -241,76 +241,76 @@ Visual Studio Code
      Create 3
 ```
 
-Vanaf hier kun je de code verder uitbreiden, bijvoorbeeld om:
+From here you can expand the code further, for example to:
 
-* de robot achteruit te laten rijden;
-* links en rechts te laten draaien;
-* de robot met toetsen te besturen;
-* sensoren uit te lezen;
-* een bepaalde route te laten rijden;
-* de robot onderdeel te maken van een groter programma.
+* make the robot drive backwards;
+* make it turn left and right;
+* control the robot with keys;
+* read out sensors;
+* make it drive a specific route;
+* make the robot part of a larger program.
 
 ---
 
-## 11. Veelvoorkomende problemen
+## 11. Common problems
 
-### Er staat `(.venv)` niet in de terminal
+### The terminal does not show `(.venv)`
 
-Activeer de omgeving opnieuw:
+Reactivate the environment:
 
 ```powershell
 .venv\Scripts\Activate.ps1
 ```
 
-### Python gebruikt de verkeerde versie
+### Python is using the wrong version
 
-Controleer:
+Check:
 
 ```powershell
 python --version
 ```
 
-Voor deze test moet dit ongeveer zijn:
+For this test this should be approximately:
 
 ```text
 Python 3.11.x
 ```
 
-### De robot wordt niet gevonden
+### The robot is not found
 
-Controleer:
+Check:
 
-* staat de Create 3 aan?
-* is iemand anders ermee verbonden?
-* staat de robot dichtbij de computer?
-* is `python.irobot.com` gesloten?
-* is Bluetooth op de computer ingeschakeld?
+* is the Create 3 turned on?
+* is someone else connected to it?
+* is the robot close to the computer?
+* is `python.irobot.com` closed?
+* is Bluetooth enabled on the computer?
 
-Probeer daarna het programma opnieuw te starten.
+Then try to start the program again.
 
-### De robot rijdt te snel
+### The robot drives too fast
 
-Verlaag bijvoorbeeld:
+Lower, for example:
 
 ```python
 await robot.set_wheel_speeds(20, 20)
 ```
 
-naar:
+to:
 
 ```python
 await robot.set_wheel_speeds(10, 10)
 ```
 
-### De robot rijdt te lang
+### The robot drives too long
 
-Verlaag:
+Lower:
 
 ```python
 await robot.wait(3)
 ```
 
-bijvoorbeeld naar:
+for example to:
 
 ```python
 await robot.wait(1)
@@ -318,8 +318,8 @@ await robot.wait(1)
 
 ---
 
-## Belangrijk
+## Important
 
-Gebruik voor de eerste test altijd een **open ruimte**. De robot voert het rijcommando uit zonder rekening te houden met obstakels.
+Always use an **open space** for the first test. The robot executes the driving command without taking obstacles into account.
 
-Deze eenvoudige test gebruikt alleen **Python + Bluetooth**. ROS 2, WSL en Wi-Fi zijn voor deze eerste test niet nodig.
+This simple test only uses **Python + Bluetooth**. ROS 2, WSL, and Wi-Fi are not needed for this first test.

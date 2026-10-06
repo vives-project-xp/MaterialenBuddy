@@ -17,7 +17,7 @@ async def reset_origin() -> None:
     await robot.stop()
     await robot.disconnect()
     await robot._backend.disconnect()
-    print("Nieuw nulpunt ingesteld op de huidige robotpositie.")
+    print("New origin set to the current robot position.")
 
 
 asyncio.run(reset_origin())

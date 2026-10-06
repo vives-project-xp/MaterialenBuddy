@@ -1,8 +1,8 @@
-# Eerste lokale test
+# First local test
 
-## Installatie
+## Installation
 
-Open PowerShell in deze map en voer uit:
+Open PowerShell in this folder and run:
 
 ```powershell
 py -m venv .venv
@@ -10,55 +10,55 @@ py -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-## Starten
+## Starting
 
 ```powershell
 python -m uvicorn server:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Open daarna http://127.0.0.1:8000 in de browser. De standaardmodus is `mock`: na een klik wordt na twee seconden de status `aangekomen` getoond.
+Then open http://127.0.0.1:8000 in the browser. The default mode is `mock`: after a click, the status `arrived` is shown after two seconds.
 
-## Wat is er gebouwd?
+## What was built?
 
-Deze testapp bestaat uit een FastAPI-server, een eenvoudige webpagina en `waypoints.json` met de locaties. De webpagina haalt de locaties op en stuurt bij een klik een navigatieopdracht naar de server. De server geeft de status `onderweg`, `aangekomen`, `geannuleerd` of `fout` terug.
+This test app consists of a FastAPI server, a simple web page, and `waypoints.json` with the locations. The web page fetches the locations and sends a navigation order to the server when a click occurs. The server returns the status `en route`, `arrived`, `cancelled`, or `error`.
 
-Er zijn twee modi: `mock` om de software veilig te testen zonder robot, en `bluetooth` om de Create 3 echt te laten rijden met de officiële `irobot-edu-sdk`. Een nieuwe opdracht annuleert een vorige opdracht en vastgelopen navigatie krijgt een timeout.
+There are two modes: `mock` to test the software safely without a robot, and `bluetooth` to actually drive the Create 3 using the official `irobot-edu-sdk`. A new order cancels a previous order, and stuck navigation gets a timeout.
 
-Met `reset_origin.py` kan de huidige plek van de robot eenmalig als nieuw nulpunt `(0, 0)` worden ingesteld. De waypoints worden als absolute coördinaten in centimeters opgeslagen.
+With `reset_origin.py`, the current position of the robot can be set once as the new origin `(0, 0)`. The waypoints are stored as absolute coordinates in centimeters.
 
-De robotconfiguratie staat standaard op `10.10.234.52`. Controleer eerst de netwerkverbinding:
+The robot configuration is set to `10.10.234.52` by default. Check the network connection first:
 
 ```powershell
 Test-Connection 10.10.234.52 -Count 1
 Test-NetConnection 10.10.234.52 -Port 80
 ```
 
-De standaardmodus is `mock`. Voor echte Bluetooth-navigatie start je de server met:
+The default mode is `mock`. For real Bluetooth navigation, start the server with:
 
 ```powershell
 $env:CREATE3_MODE = "bluetooth"
 python -m uvicorn server:app --host 127.0.0.1 --port 8001 --reload
 ```
 
-Daarna sturen de knoppen op http://127.0.0.1:8001 de Create 3 echt naar de gekozen waypoint. De server gebruikt een timeout van 60 seconden per opdracht.
+After that, the buttons on http://127.0.0.1:8001 actually drive the Create 3 to the chosen waypoint. The server uses a timeout of 60 seconds per order.
 
-## Eerste fysieke Bluetooth-test
+## First physical Bluetooth test
 
-Zet de Create 3 vrij op de vloer en zorg dat er minstens 1 meter ruimte rondom de robot is. Zet Bluetooth op de laptop aan en voer daarna uit:
+Place the Create 3 freely on the floor and make sure there is at least 1 meter of space around the robot. Turn on Bluetooth on the laptop and then run:
 
 ```powershell
 python bluetooth_test.py
 ```
 
-## Nieuw nulpunt instellen
+## Setting a new origin
 
-Zet de robot op de gewenste huidige startplek en voer dit eenmalig uit. De robot rijdt niet; zijn huidige plek wordt `(0, 0)`.
+Place the robot on the desired current starting position and run this once. The robot does not drive; its current position becomes `(0, 0)`.
 
 ```powershell
 python reset_origin.py
 ```
 
-De robot rijdt 10 cm vooruit en daarna terug naar het startpunt. Je kunt eventueel de Bluetooth-naam meegeven:
+The robot drives 10 cm forward and then back to the starting point. You can optionally provide the Bluetooth name:
 
 ```powershell
 $env:CREATE3_BLUETOOTH_NAME = "Create 3"
