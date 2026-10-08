@@ -7,7 +7,7 @@
 
 
 ## The assignment
-
+The goal of this project is to develop an autonomous robot that can transport materials to designated locations in healthcare facilities. Through a web application, nursing staff can request the materials they need and specify a delivery location. By automating routine material transport tasks, the system allows nursing staff to spend more time on direct patient care.
 
 ## Posters
 
