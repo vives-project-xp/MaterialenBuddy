@@ -38,6 +38,10 @@ class LeveringAanvraag(BaseModel):
     medicijnen: list[LeveringMedicijn] = Field(min_length=1)
 
 
+class VoorraadAanvulling(BaseModel):
+    aantal: int = Field(gt=0)
+
+
 @app.get("/", include_in_schema=False)
 async def index() -> FileResponse:
     return FileResponse(BASE_DIR / "index.html")
@@ -61,6 +65,58 @@ def medicijnen() -> list[dict[str, Any]]:
 @app.get("/voorraad")
 def voorraad() -> list[dict[str, Any]]:
     return medicijnen()
+
+
+@app.post("/voorraad/{medicijn_id}")
+def voorraad_aanvullen(
+    medicijn_id: int,
+    aanvulling: VoorraadAanvulling,
+) -> dict[str, Any]:
+    with engine.begin() as connection:
+        medicijn = connection.execute(
+            text("SELECT id FROM medicijnen WHERE id = :id"),
+            {"id": medicijn_id},
+        ).mappings().first()
+        if medicijn is None:
+            raise HTTPException(status_code=404, detail="Medicijn niet gevonden")
+
+        bestaande_voorraad = connection.execute(
+            text("SELECT id FROM voorraad WHERE medicijn_id = :medicijn_id"),
+            {"medicijn_id": medicijn_id},
+        ).mappings().first()
+
+        if bestaande_voorraad is None:
+            connection.execute(
+                text("""
+                    INSERT INTO voorraad (medicijn_id, aantal)
+                    VALUES (:medicijn_id, :aantal)
+                """),
+                {"medicijn_id": medicijn_id, "aantal": aanvulling.aantal},
+            )
+        else:
+            connection.execute(
+                text("""
+                    UPDATE voorraad
+                    SET aantal = aantal + :aantal
+                    WHERE medicijn_id = :medicijn_id
+                """),
+                {"medicijn_id": medicijn_id, "aantal": aanvulling.aantal},
+            )
+
+        connection.execute(
+            text("""
+                INSERT INTO voorraad_mutaties
+                    (medicijn_id, verschil, reden)
+                VALUES (:medicijn_id, :verschil, :reden)
+            """),
+            {
+                "medicijn_id": medicijn_id,
+                "verschil": aanvulling.aantal,
+                "reden": "Handmatig aangevuld",
+            },
+        )
+
+    return {"medicijn_id": medicijn_id, "toegevoegd": aanvulling.aantal}
 
 
 @app.post("/leveringen", status_code=201)

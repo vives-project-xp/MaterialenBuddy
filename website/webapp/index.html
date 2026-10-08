@@ -90,6 +90,31 @@
       border-radius: 6px;
     }
 
+    .voorraadlijst {
+      list-style: none;
+      padding: 0;
+      margin: 10px 0 0;
+    }
+
+    .voorraaditem {
+      display: flex;
+      justify-content: space-between;
+      padding: 9px 0;
+      border-bottom: 1px solid #e4eaf0;
+    }
+
+    .lageVoorraad {
+      color: #b32635;
+      font-weight: bold;
+    }
+
+    .voorraadAanvullen {
+      display: grid;
+      grid-template-columns: 1fr 110px;
+      gap: 12px;
+      align-items: end;
+    }
+
     #medicijnenLijst {
       padding-left: 0;
       list-style: none;
@@ -102,6 +127,32 @@
     <h1>Medicijnlevering</h1>
     <p>Centrale locatie: <strong>B303</strong></p>
     <p>Demoversie — nog niet verbonden met de robot.</p>
+
+    <section class="melding">
+      <h2>Huidige voorraad</h2>
+      <p id="voorraadLaden">Voorraad laden...</p>
+      <ul id="voorraadLijst" class="voorraadlijst"></ul>
+    </section>
+
+    <section class="melding">
+      <h2>Voorraad aanvullen</h2>
+      <div class="voorraadAanvullen">
+        <div>
+          <label for="aanvulMedicijn">Medicijn</label>
+          <select id="aanvulMedicijn">
+            <option value="">Kies een medicijn</option>
+          </select>
+        </div>
+        <div>
+          <label for="aanvulAantal">Aantal</label>
+          <input id="aanvulAantal" type="number" min="1" step="1" value="1">
+        </div>
+      </div>
+      <button id="aanvulknop" class="secundair" type="button">
+        Voorraad aanvullen
+      </button>
+      <p id="aanvulStatus" aria-live="polite"></p>
+    </section>
 
     <form id="leveringFormulier">
       <label for="bestemming">Bestemming</label>
@@ -176,12 +227,76 @@
     const legeLijst = document.getElementById("legeLijst");
     const robotstatus = document.getElementById("robotstatus");
     const voorraadstatus = document.getElementById("voorraadstatus");
+    const voorraadLaden = document.getElementById("voorraadLaden");
+    const voorraadLijst = document.getElementById("voorraadLijst");
+    const aanvulMedicijn = document.getElementById("aanvulMedicijn");
+    const aanvulAantal = document.getElementById("aanvulAantal");
+    const aanvulknop = document.getElementById("aanvulknop");
+    const aanvulStatus = document.getElementById("aanvulStatus");
     const verzendknop = document.getElementById("verzendknop");
     const voorraadMedicijn = document.getElementById("voorraadMedicijn");
     const voorraadknop = document.getElementById("voorraadknop");
 
     let geselecteerdeMedicijnen = [];
     let aankomstTimer = null;
+
+    async function laadVoorraad() {
+      try {
+        const response = await fetch("/voorraad");
+        const voorraad = await response.json();
+
+        if (!response.ok) {
+          throw new Error("Voorraad kon niet worden geladen.");
+        }
+
+        voorraadLijst.replaceChildren();
+        voorraadLaden.hidden = voorraad.length > 0;
+        aanvulMedicijn.replaceChildren();
+        voorraadMedicijn.replaceChildren();
+
+        const legeOptie = document.createElement("option");
+        legeOptie.value = "";
+        legeOptie.textContent = "Kies een medicijn";
+        aanvulMedicijn.appendChild(legeOptie);
+
+        const voorraadLegeOptie = document.createElement("option");
+        voorraadLegeOptie.value = "";
+        voorraadLegeOptie.textContent = "Kies een medicijn";
+        voorraadMedicijn.appendChild(voorraadLegeOptie);
+
+        voorraad.forEach(function (item) {
+          const rij = document.createElement("li");
+          rij.className = "voorraaditem";
+
+          const naam = document.createElement("span");
+          naam.textContent = item.naam;
+
+          const aantal = document.createElement("span");
+          aantal.textContent = `${item.aantal} stuks`;
+          if (item.aantal <= item.minimum_voorraad) {
+            aantal.className = "lageVoorraad";
+            aantal.textContent += " — lage voorraad";
+          }
+
+          rij.append(naam, aantal);
+          voorraadLijst.appendChild(rij);
+
+          const aanvulOptie = document.createElement("option");
+          aanvulOptie.value = item.id;
+          aanvulOptie.textContent = item.naam;
+          aanvulMedicijn.appendChild(aanvulOptie);
+
+          const voorraadOptie = document.createElement("option");
+          voorraadOptie.value = item.naam;
+          voorraadOptie.textContent = item.naam;
+          voorraadMedicijn.appendChild(voorraadOptie);
+        });
+      } catch (error) {
+        voorraadLijst.replaceChildren();
+        voorraadLaden.hidden = false;
+        voorraadLaden.textContent = "Voorraad kon niet worden geladen.";
+      }
+    }
 
     function toonMedicijnen() {
       medicijnenLijst.replaceChildren();
@@ -312,17 +427,9 @@
         return;
       }
 
-      voorraadMedicijn.replaceChildren();
-
-      opdracht.medicijnen.forEach(function (item) {
-        const optie = document.createElement("option");
-        optie.value = item.naam;
-        optie.textContent = item.naam;
-        voorraadMedicijn.appendChild(optie);
-      });
-
       voorraadstatus.textContent = "Geen melding";
       robotstatus.textContent = `Levering #${antwoord.id} aangemaakt. Robot is onderweg naar ${bestemming}`;
+      laadVoorraad();
 
       clearTimeout(aankomstTimer);
 
@@ -354,6 +461,42 @@
 
       voorraadstatus.textContent = `${medicijn} is op`;
     });
+
+    aanvulknop.addEventListener("click", async function () {
+      const medicijnId = aanvulMedicijn.value;
+      const aantal = Number(aanvulAantal.value);
+
+      if (!medicijnId || !Number.isSafeInteger(aantal) || aantal < 1) {
+        aanvulStatus.textContent = "Kies een medicijn en een geldig aantal.";
+        return;
+      }
+
+      aanvulknop.disabled = true;
+      aanvulStatus.textContent = "Voorraad aanvullen...";
+
+      try {
+        const response = await fetch(`/voorraad/${medicijnId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ aantal: aantal })
+        });
+        const antwoord = await response.json();
+
+        if (!response.ok) {
+          throw new Error(antwoord.detail || "Voorraad kon niet worden aangevuld.");
+        }
+
+        aanvulStatus.textContent = "Voorraad handmatig aangevuld.";
+        aanvulAantal.value = "1";
+        await laadVoorraad();
+      } catch (error) {
+        aanvulStatus.textContent = error.message;
+      } finally {
+        aanvulknop.disabled = false;
+      }
+    });
+
+    laadVoorraad();
   </script>
 </body>
 </html>

@@ -20,3 +20,4 @@ The goal of this project is to develop an autonomous robot that can transport ma
 ## Folder structure
 - [research](./research/readme.md) : This contains all the ideas for this project.
 - [media](./media/readme.md) : This contains everything from posters to Instagram posts.
+- [website](./website/readme.md): This constains everything for the website. 
