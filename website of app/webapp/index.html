@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Medicijnlevering - Create 3</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f5f9;
+      color: #17212b;
+      margin: 0;
+      padding: 24px;
+    }
+
+    main {
+      max-width: 550px;
+      margin: 40px auto;
+      background: white;
+      padding: 28px;
+      border-radius: 12px;
+      box-shadow: 0 4px 18px #00000014;
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    label {
+      display: block;
+      margin-top: 18px;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+
+    select, input, button {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 11px;
+      font-size: 16px;
+    }
+
+    button {
+      margin-top: 16px;
+      color: white;
+      background: #1769aa;
+      border: 0;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: #8b9baa;
+      cursor: not-allowed;
+    }
+
+    .secundair {
+      background: #54677a;
+    }
+
+    .verwijderknop {
+      width: auto;
+      margin: 0;
+      padding: 6px 10px;
+      background: #b32635;
+      font-size: 14px;
+    }
+
+    .invoerrij {
+      display: grid;
+      grid-template-columns: 1fr 110px;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .medicijnrij {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 0;
+      border-bottom: 1px solid #e4eaf0;
+    }
+
+    .melding {
+      margin-top: 20px;
+      padding: 14px;
+      background: #edf3f8;
+      border-radius: 6px;
+    }
+
+    #medicijnenLijst {
+      padding-left: 0;
+      list-style: none;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <h1>Medicijnlevering</h1>
+    <p>Centrale locatie: <strong>B303</strong></p>
+    <p>Demoversie — nog niet verbonden met de robot.</p>
+
+    <form id="leveringFormulier">
+      <label for="bestemming">Bestemming</label>
+      <select id="bestemming" required>
+        <option value="">Kies een bestemming</option>
+        <option value="B301">B301</option>
+        <option value="B302">B302</option>
+      </select>
+
+      <div class="invoerrij">
+        <div>
+          <label for="medicijnInvoer">Medicijn</label>
+          <input
+            id="medicijnInvoer"
+            type="text"
+            placeholder="Bijvoorbeeld: medicijn A"
+          >
+        </div>
+
+        <div>
+          <label for="aantalInvoer">Aantal</label>
+          <input
+            id="aantalInvoer"
+            type="number"
+            min="1"
+            step="1"
+            value="1"
+          >
+        </div>
+      </div>
+
+      <button id="toevoegknop" class="secundair" type="button">
+        Voeg medicijn toe
+      </button>
+
+      <h2>Medicijnen voor deze levering</h2>
+      <p id="legeLijst">Nog geen medicijnen toegevoegd.</p>
+      <ul id="medicijnenLijst"></ul>
+
+      <button id="verzendknop" type="submit">
+        Levering aanvragen
+      </button>
+    </form>
+
+    <div class="melding">
+      <strong>Robotstatus:</strong>
+      <span id="robotstatus">Geen actieve levering</span>
+    </div>
+
+    <div class="melding">
+      <strong>Voorraadmelding:</strong>
+      <span id="voorraadstatus">Geen melding</span>
+    </div>
+
+    <label for="voorraadMedicijn">Test voorraadmelding voor</label>
+    <select id="voorraadMedicijn">
+      <option value="">Kies eerst een medicijn</option>
+    </select>
+
+    <button id="voorraadknop" class="secundair" type="button">
+      Simuleer: medicijn is op
+    </button>
+  </main>
+
+  <script>
+    const formulier = document.getElementById("leveringFormulier");
+    const bestemmingVeld = document.getElementById("bestemming");
+    const medicijnInvoer = document.getElementById("medicijnInvoer");
+    const aantalInvoer = document.getElementById("aantalInvoer");
+    const toevoegknop = document.getElementById("toevoegknop");
+    const medicijnenLijst = document.getElementById("medicijnenLijst");
+    const legeLijst = document.getElementById("legeLijst");
+    const robotstatus = document.getElementById("robotstatus");
+    const voorraadstatus = document.getElementById("voorraadstatus");
+    const verzendknop = document.getElementById("verzendknop");
+    const voorraadMedicijn = document.getElementById("voorraadMedicijn");
+    const voorraadknop = document.getElementById("voorraadknop");
+
+    let geselecteerdeMedicijnen = [];
+    let aankomstTimer = null;
+
+    function toonMedicijnen() {
+      medicijnenLijst.replaceChildren();
+      legeLijst.hidden = geselecteerdeMedicijnen.length > 0;
+
+      geselecteerdeMedicijnen.forEach(function (item, index) {
+        const rij = document.createElement("li");
+        rij.className = "medicijnrij";
+
+        const beschrijving = document.createElement("span");
+        beschrijving.textContent = `${item.naam} — ${item.aantal} stuks`;
+
+        const verwijderknop = document.createElement("button");
+        verwijderknop.type = "button";
+        verwijderknop.className = "verwijderknop";
+        verwijderknop.textContent = "Verwijder";
+        verwijderknop.disabled = verzendknop.disabled;
+
+        verwijderknop.addEventListener("click", function () {
+          geselecteerdeMedicijnen.splice(index, 1);
+          toonMedicijnen();
+        });
+
+        rij.append(beschrijving, verwijderknop);
+        medicijnenLijst.appendChild(rij);
+      });
+    }
+
+    function voegMedicijnToe() {
+      const naam = medicijnInvoer.value.trim();
+      const aantal = Number(aantalInvoer.value);
+
+      if (!naam) {
+        alert("Vul een medicijnnaam in.");
+        medicijnInvoer.focus();
+        return;
+      }
+
+      if (!Number.isSafeInteger(aantal) || aantal < 1) {
+        alert("Vul een geldig geheel aantal van minstens 1 in.");
+        aantalInvoer.focus();
+        return;
+      }
+
+      const bestaandItem = geselecteerdeMedicijnen.find(function (item) {
+        return item.naam.toLowerCase() === naam.toLowerCase();
+      });
+
+      if (bestaandItem) {
+        if (!Number.isSafeInteger(bestaandItem.aantal + aantal)) {
+          alert("Het totale aantal is te groot.");
+          return;
+        }
+
+        bestaandItem.aantal += aantal;
+      } else {
+        geselecteerdeMedicijnen.push({ naam: naam, aantal: aantal });
+      }
+
+      medicijnInvoer.value = "";
+      aantalInvoer.value = "1";
+      medicijnInvoer.focus();
+      toonMedicijnen();
+    }
+
+    toevoegknop.addEventListener("click", voegMedicijnToe);
+
+    medicijnInvoer.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        voegMedicijnToe();
+      }
+    });
+
+    formulier.addEventListener("submit", function (event) {
+      event.preventDefault();
+
+      if (geselecteerdeMedicijnen.length === 0) {
+        alert("Voeg minstens één medicijn toe.");
+        medicijnInvoer.focus();
+        return;
+      }
+
+      const bestemming = bestemmingVeld.value;
+
+      const opdracht = {
+        startlocatie: "B303",
+        bestemming: bestemming,
+        medicijnen: geselecteerdeMedicijnen.map(function (item) {
+          return { naam: item.naam, aantal: item.aantal };
+        })
+      };
+
+      console.log("Demo-opdracht:", opdracht);
+
+      voorraadMedicijn.replaceChildren();
+
+      opdracht.medicijnen.forEach(function (item) {
+        const optie = document.createElement("option");
+        optie.value = item.naam;
+        optie.textContent = item.naam;
+        voorraadMedicijn.appendChild(optie);
+      });
+
+      voorraadstatus.textContent = "Geen melding";
+      robotstatus.textContent = `Robot is onderweg naar ${bestemming}`;
+
+      verzendknop.disabled = true;
+      toevoegknop.disabled = true;
+      medicijnInvoer.disabled = true;
+      aantalInvoer.disabled = true;
+      bestemmingVeld.disabled = true;
+
+      clearTimeout(aankomstTimer);
+
+      // Alleen voor de demo: na 5 seconden tonen we "aangekomen".
+      aankomstTimer = setTimeout(function () {
+        robotstatus.textContent = `Robot is aangekomen in ${bestemming}`;
+
+        verzendknop.disabled = false;
+        toevoegknop.disabled = false;
+        medicijnInvoer.disabled = false;
+        aantalInvoer.disabled = false;
+        bestemmingVeld.disabled = false;
+
+        aankomstTimer = null;
+        toonMedicijnen();
+      }, 5000);
+
+      toonMedicijnen();
+    });
+
+    voorraadknop.addEventListener("click", function () {
+      const medicijn = voorraadMedicijn.value;
+
+      if (!medicijn) {
+        voorraadstatus.textContent =
+          "Vraag eerst een levering aan met minstens één medicijn.";
+        return;
+      }
+
+      voorraadstatus.textContent = `${medicijn} is op`;
+    });
+  </script>
+</body>
+</html>
