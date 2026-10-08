@@ -12,7 +12,7 @@ The goal of this project is to develop an autonomous robot that can transport ma
 ## Posters
 
 <div style="display: flex; gap: 10px;">
-   <img src="" height="auto" width="350">
+   <img src="./photos/poster.png" height="auto" width="350">
    <img src="" width="350">
 </div>
 
