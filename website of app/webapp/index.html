@@ -256,7 +256,7 @@
       }
     });
 
-    formulier.addEventListener("submit", function (event) {
+    formulier.addEventListener("submit", async function (event) {
       event.preventDefault();
 
       if (geselecteerdeMedicijnen.length === 0) {
@@ -275,7 +275,42 @@
         })
       };
 
-      console.log("Demo-opdracht:", opdracht);
+      verzendknop.disabled = true;
+      toevoegknop.disabled = true;
+      medicijnInvoer.disabled = true;
+      aantalInvoer.disabled = true;
+      bestemmingVeld.disabled = true;
+      robotstatus.textContent = "Levering controleren...";
+
+      let response;
+      let antwoord;
+
+      try {
+        response = await fetch("/leveringen", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(opdracht)
+        });
+        antwoord = await response.json();
+      } catch (error) {
+        robotstatus.textContent = "Kan geen verbinding maken met de server.";
+        verzendknop.disabled = false;
+        toevoegknop.disabled = false;
+        medicijnInvoer.disabled = false;
+        aantalInvoer.disabled = false;
+        bestemmingVeld.disabled = false;
+        return;
+      }
+
+      if (!response.ok) {
+        robotstatus.textContent = antwoord.detail || "Levering kon niet worden aangemaakt.";
+        verzendknop.disabled = false;
+        toevoegknop.disabled = false;
+        medicijnInvoer.disabled = false;
+        aantalInvoer.disabled = false;
+        bestemmingVeld.disabled = false;
+        return;
+      }
 
       voorraadMedicijn.replaceChildren();
 
@@ -287,13 +322,7 @@
       });
 
       voorraadstatus.textContent = "Geen melding";
-      robotstatus.textContent = `Robot is onderweg naar ${bestemming}`;
-
-      verzendknop.disabled = true;
-      toevoegknop.disabled = true;
-      medicijnInvoer.disabled = true;
-      aantalInvoer.disabled = true;
-      bestemmingVeld.disabled = true;
+      robotstatus.textContent = `Levering #${antwoord.id} aangemaakt. Robot is onderweg naar ${bestemming}`;
 
       clearTimeout(aankomstTimer);
 
