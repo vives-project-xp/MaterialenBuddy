@@ -111,6 +111,31 @@ http://127.0.0.1:8000/
 
 De terminal moet open blijven zolang de website draait. Stop de server met `Ctrl+C`.
 
+## Starten met Docker
+
+Docker start automatisch zowel MySQL als de FastAPI-webapp. Open PowerShell in deze map:
+
+```powershell
+cd "C:\Users\Gebruiker\Documents\3de jaar\MaterialenBuddy\website\webapp"
+docker compose up --build
+```
+
+Open daarna http://127.0.0.1:8000/. De database wordt bij de eerste start aangemaakt met het schema uit `website/database/materialenbuddy_test_database.sql` en testdata uit `website/database/02-seed.sql`.
+
+Stop de containers met:
+
+```powershell
+docker compose down
+```
+
+Ook de MySQL-data verwijderen en helemaal opnieuw initialiseren:
+
+```powershell
+docker compose down -v
+```
+
+De standaard Docker-wachtwoorden zijn alleen bedoeld voor lokaal testen. Je kunt ze aanpassen met `MYSQL_PASSWORD` en `MYSQL_ROOT_PASSWORD` in een `.env`-bestand naast `docker-compose.yaml`.
+
 ## Handige controles
 
 Controleer of de backend medicijnen kan ophalen via:

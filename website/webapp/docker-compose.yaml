@@ -1,0 +1,32 @@
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: materialenbuddy
+      MYSQL_USER: materialenbuddy_app
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-materialenbuddy_dev_password}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-materialenbuddy_root_password}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../database/materialenbuddy_test_database.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ../database/02-seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  web:
+    build: .
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql+pymysql://materialenbuddy_app:${MYSQL_PASSWORD:-materialenbuddy_dev_password}@db:3306/materialenbuddy
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
