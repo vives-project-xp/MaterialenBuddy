@@ -1,0 +1,3 @@
+- lidar sensor
+- mapping met software voor robot met camera
+- beakon met wifi of bluetooth waar hij naartoe kan rijden

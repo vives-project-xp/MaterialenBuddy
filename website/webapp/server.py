@@ -11,7 +11,7 @@ from sqlalchemy import create_engine, text
 
 
 BASE_DIR = Path(__file__).parent
-load_dotenv(BASE_DIR / ".env")
+load_dotenv(BASE_DIR / ".env", override=True)
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
