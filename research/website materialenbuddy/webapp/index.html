@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Medicijnlevering - Create 3</title>
+
+  <style>
+    [hidden] { display: none !important; }
+    a { color: #1769aa; }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f5f9;
+      color: #17212b;
+      margin: 0;
+      padding: 24px;
+    }
+
+    main {
+      max-width: 550px;
+      margin: 40px auto;
+      background: white;
+      padding: 28px;
+      border-radius: 12px;
+      box-shadow: 0 4px 18px #00000014;
+    }
+
+    h1 {
+      margin-top: 0;
+    }
+
+    label {
+      display: block;
+      margin-top: 18px;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+
+    select, input, button {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 11px;
+      font-size: 16px;
+    }
+
+    button {
+      margin-top: 16px;
+      color: white;
+      background: #1769aa;
+      border: 0;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      background: #8b9baa;
+      cursor: not-allowed;
+    }
+
+    .secundair {
+      background: #54677a;
+    }
+
+    .verwijderknop {
+      width: auto;
+      margin: 0;
+      padding: 6px 10px;
+      background: #b32635;
+      font-size: 14px;
+    }
+
+    .invoerrij {
+      display: grid;
+      grid-template-columns: 1fr 110px;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .medicijnrij {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 0;
+      border-bottom: 1px solid #e4eaf0;
+    }
+
+    .melding {
+      margin-top: 20px;
+      padding: 14px;
+      background: #edf3f8;
+      border-radius: 6px;
+    }
+
+    .voorraadlijst {
+      list-style: none;
+      padding: 0;
+      margin: 10px 0 0;
+    }
+
+    .voorraaditem {
+      display: flex;
+      justify-content: space-between;
+      padding: 9px 0;
+      border-bottom: 1px solid #e4eaf0;
+    }
+
+    .lageVoorraad {
+      color: #b32635;
+      font-weight: bold;
+    }
+
+    .voorraadAanvullen {
+      display: grid;
+      grid-template-columns: 1fr 110px;
+      gap: 12px;
+      align-items: end;
+    }
+
+    #medicijnenLijst {
+      padding-left: 0;
+      list-style: none;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <h1>Medicijnlevering</h1>
+    <section id="aanmelden" class="melding">
+      <p>Log in om medicijnen te bestellen.</p>
+      <a href="/auth/login">Inloggen of account maken</a>
+      <p id="loginStatus" role="status"></p>
+    </section>
+    <div id="appInhoud" hidden>
+    <p id="accountInfo"></p>
+    <button id="uitloggen" class="secundair" type="button">Uitloggen bij MaterialenBuddy</button>
+    <p>Centrale locatie: <strong>B303</strong></p>
+    <p>Demoversie — nog niet verbonden met de robot.</p>
+
+    <section class="melding">
+      <h2>Huidige voorraad</h2>
+      <p id="voorraadLaden">Voorraad laden...</p>
+      <ul id="voorraadLijst" class="voorraadlijst"></ul>
+    </section>
+
+    <section class="melding" data-admin hidden>
+      <h2>Voorraad aanvullen</h2>
+      <div class="voorraadAanvullen">
+        <div>
+          <label for="aanvulMedicijn">Medicijn</label>
+          <select id="aanvulMedicijn">
+            <option value="">Kies een medicijn</option>
+          </select>
+        </div>
+        <div>
+          <label for="aanvulAantal">Aantal</label>
+          <input id="aanvulAantal" type="number" min="1" step="1" value="1">
+        </div>
+      </div>
+      <button id="aanvulknop" class="secundair" type="button">
+        Voorraad aanvullen
+      </button>
+      <p id="aanvulStatus" aria-live="polite"></p>
+    </section>
+
+    <section class="melding" data-admin hidden>
+      <h2>Nieuw materiaal</h2>
+      <form id="materiaalFormulier">
+        <label for="materiaalNaam">Naam</label>
+        <input id="materiaalNaam" required maxlength="150">
+        <label for="materiaalMinimum">Minimumvoorraad</label>
+        <input id="materiaalMinimum" type="number" min="0" max="2147483647" step="1" value="0" required>
+        <label for="materiaalAantal">Beginvoorraad</label>
+        <input id="materiaalAantal" type="number" min="0" max="2147483647" step="1" value="0" required>
+        <button type="submit">Materiaal registreren</button>
+      </form>
+      <p id="materiaalStatus" role="status"></p>
+    </section>
+
+    <form id="leveringFormulier">
+      <label for="bestemming">Bestemming</label>
+      <select id="bestemming" required>
+        <option value="">Kies een bestemming</option>
+        <option value="B301">B301</option>
+        <option value="B302">B302</option>
+      </select>
+
+      <div class="invoerrij">
+        <div>
+          <label for="medicijnInvoer">Medicijn</label>
+          <input
+            id="medicijnInvoer"
+            type="text"
+            placeholder="Bijvoorbeeld: medicijn A"
+          >
+        </div>
+
+        <div>
+          <label for="aantalInvoer">Aantal</label>
+          <input
+            id="aantalInvoer"
+            type="number"
+            min="1"
+            step="1"
+            value="1"
+          >
+        </div>
+      </div>
+
+      <button id="toevoegknop" class="secundair" type="button">
+        Voeg medicijn toe
+      </button>
+
+      <h2>Medicijnen voor deze levering</h2>
+      <p id="legeLijst">Nog geen medicijnen toegevoegd.</p>
+      <ul id="medicijnenLijst"></ul>
+
+      <button id="verzendknop" type="submit">
+        Levering aanvragen
+      </button>
+    </form>
+
+    <div class="melding">
+      <strong>Robotstatus:</strong>
+      <span id="robotstatus">Geen actieve levering</span>
+    </div>
+
+    <div class="melding">
+      <strong>Voorraadmelding:</strong>
+      <span id="voorraadstatus">Geen melding</span>
+    </div>
+
+    <div data-admin hidden>
+    <label for="voorraadMedicijn">Test voorraadmelding voor</label>
+    <select id="voorraadMedicijn">
+      <option value="">Kies eerst een medicijn</option>
+    </select>
+
+    <button id="voorraadknop" class="secundair" type="button">
+      Simuleer: medicijn is op
+    </button>
+    </div>
+    </div>
+  </main>
+
+  <script>
+    let account = null;
+
+    async function apiFetch(url, options = {}) {
+      const headers = new Headers(options.headers);
+      if (options.method && options.method !== "GET") {
+        headers.set("X-CSRF-Token", account?.csrf_token || "");
+      }
+      const response = await fetch(url, { ...options, headers });
+      if (response.status === 401) {
+        document.getElementById("appInhoud").hidden = true;
+        document.getElementById("aanmelden").hidden = false;
+        document.getElementById("loginStatus").textContent = "Je sessie is verlopen. Log opnieuw in.";
+      }
+      return response;
+    }
+
+    async function wijzigMateriaal(item) {
+      const naam = prompt("Materiaalnaam", item.naam);
+      if (naam === null) return;
+      const minimum = prompt("Minimumvoorraad", item.minimum_voorraad);
+      if (minimum === null) return;
+      const minimumVoorraad = Number(minimum);
+      if (!naam.trim() || !minimum.trim() || !Number.isSafeInteger(minimumVoorraad) || minimumVoorraad < 0) {
+        alert("Vul een naam en een geldig minimum in.");
+        return;
+      }
+      try {
+        const response = await apiFetch(`/medicijnen/${item.id}`, {
+          method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ naam: naam.trim(), minimum_voorraad: minimumVoorraad })
+        });
+        if (!response.ok) throw new Error((await response.json()).detail);
+        await laadVoorraad();
+      } catch (error) { alert(error.message); }
+    }
+
+    async function verwijderMateriaal(item) {
+      if (!confirm(`Materiaal ${item.naam} verwijderen?`)) return;
+      try {
+        const response = await apiFetch(`/medicijnen/${item.id}`, { method: "DELETE" });
+        if (!response.ok) throw new Error((await response.json()).detail);
+        await laadVoorraad();
+      } catch (error) { alert(error.message); }
+    }
+    const formulier = document.getElementById("leveringFormulier");
+    const bestemmingVeld = document.getElementById("bestemming");
+    const medicijnInvoer = document.getElementById("medicijnInvoer");
+    const aantalInvoer = document.getElementById("aantalInvoer");
+    const toevoegknop = document.getElementById("toevoegknop");
+    const medicijnenLijst = document.getElementById("medicijnenLijst");
+    const legeLijst = document.getElementById("legeLijst");
+    const robotstatus = document.getElementById("robotstatus");
+    const voorraadstatus = document.getElementById("voorraadstatus");
+    const voorraadLaden = document.getElementById("voorraadLaden");
+    const voorraadLijst = document.getElementById("voorraadLijst");
+    const aanvulMedicijn = document.getElementById("aanvulMedicijn");
+    const aanvulAantal = document.getElementById("aanvulAantal");
+    const aanvulknop = document.getElementById("aanvulknop");
+    const aanvulStatus = document.getElementById("aanvulStatus");
+    const verzendknop = document.getElementById("verzendknop");
+    const voorraadMedicijn = document.getElementById("voorraadMedicijn");
+    const voorraadknop = document.getElementById("voorraadknop");
+
+    let geselecteerdeMedicijnen = [];
+    let aankomstTimer = null;
+
+    async function laadVoorraad() {
+      try {
+        const response = await apiFetch("/voorraad");
+        const voorraad = await response.json();
+
+        if (!response.ok) {
+          throw new Error("Voorraad kon niet worden geladen.");
+        }
+
+        voorraadLijst.replaceChildren();
+        voorraadLaden.hidden = voorraad.length > 0;
+        aanvulMedicijn.replaceChildren();
+        voorraadMedicijn.replaceChildren();
+
+        const legeOptie = document.createElement("option");
+        legeOptie.value = "";
+        legeOptie.textContent = "Kies een medicijn";
+        aanvulMedicijn.appendChild(legeOptie);
+
+        const voorraadLegeOptie = document.createElement("option");
+        voorraadLegeOptie.value = "";
+        voorraadLegeOptie.textContent = "Kies een medicijn";
+        voorraadMedicijn.appendChild(voorraadLegeOptie);
+
+        voorraad.forEach(function (item) {
+          const rij = document.createElement("li");
+          rij.className = "voorraaditem";
+
+          const naam = document.createElement("span");
+          naam.textContent = item.naam;
+
+          const aantal = document.createElement("span");
+          aantal.textContent = `${item.aantal} stuks`;
+          if (item.aantal <= item.minimum_voorraad) {
+            aantal.className = "lageVoorraad";
+            aantal.textContent += " — lage voorraad";
+          }
+
+          rij.append(naam, aantal);
+          if (account?.role === "admin") {
+            const wijzigen = document.createElement("button");
+            wijzigen.type = "button";
+            wijzigen.className = "verwijderknop secundair";
+            wijzigen.textContent = "Wijzigen";
+            wijzigen.addEventListener("click", () => wijzigMateriaal(item));
+            const verwijderen = document.createElement("button");
+            verwijderen.type = "button";
+            verwijderen.className = "verwijderknop";
+            verwijderen.textContent = "Verwijderen";
+            verwijderen.addEventListener("click", () => verwijderMateriaal(item));
+            rij.append(wijzigen, verwijderen);
+          }
+          voorraadLijst.appendChild(rij);
+
+          const aanvulOptie = document.createElement("option");
+          aanvulOptie.value = item.id;
+          aanvulOptie.textContent = item.naam;
+          aanvulMedicijn.appendChild(aanvulOptie);
+
+          const voorraadOptie = document.createElement("option");
+          voorraadOptie.value = item.naam;
+          voorraadOptie.textContent = item.naam;
+          voorraadMedicijn.appendChild(voorraadOptie);
+        });
+      } catch (error) {
+        voorraadLijst.replaceChildren();
+        voorraadLaden.hidden = false;
+        voorraadLaden.textContent = "Voorraad kon niet worden geladen.";
+      }
+    }
+
+    function toonMedicijnen() {
+      medicijnenLijst.replaceChildren();
+      legeLijst.hidden = geselecteerdeMedicijnen.length > 0;
+
+      geselecteerdeMedicijnen.forEach(function (item, index) {
+        const rij = document.createElement("li");
+        rij.className = "medicijnrij";
+
+        const beschrijving = document.createElement("span");
+        beschrijving.textContent = `${item.naam} — ${item.aantal} stuks`;
+
+        const verwijderknop = document.createElement("button");
+        verwijderknop.type = "button";
+        verwijderknop.className = "verwijderknop";
+        verwijderknop.textContent = "Verwijder";
+        verwijderknop.disabled = verzendknop.disabled;
+
+        verwijderknop.addEventListener("click", function () {
+          geselecteerdeMedicijnen.splice(index, 1);
+          toonMedicijnen();
+        });
+
+        rij.append(beschrijving, verwijderknop);
+        medicijnenLijst.appendChild(rij);
+      });
+    }
+
+    function voegMedicijnToe() {
+      const naam = medicijnInvoer.value.trim();
+      const aantal = Number(aantalInvoer.value);
+
+      if (!naam) {
+        alert("Vul een medicijnnaam in.");
+        medicijnInvoer.focus();
+        return;
+      }
+
+      if (!Number.isSafeInteger(aantal) || aantal < 1) {
+        alert("Vul een geldig geheel aantal van minstens 1 in.");
+        aantalInvoer.focus();
+        return;
+      }
+
+      const bestaandItem = geselecteerdeMedicijnen.find(function (item) {
+        return item.naam.toLowerCase() === naam.toLowerCase();
+      });
+
+      if (bestaandItem) {
+        if (!Number.isSafeInteger(bestaandItem.aantal + aantal)) {
+          alert("Het totale aantal is te groot.");
+          return;
+        }
+
+        bestaandItem.aantal += aantal;
+      } else {
+        geselecteerdeMedicijnen.push({ naam: naam, aantal: aantal });
+      }
+
+      medicijnInvoer.value = "";
+      aantalInvoer.value = "1";
+      medicijnInvoer.focus();
+      toonMedicijnen();
+    }
+
+    toevoegknop.addEventListener("click", voegMedicijnToe);
+
+    medicijnInvoer.addEventListener("keydown", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        voegMedicijnToe();
+      }
+    });
+
+    formulier.addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      if (geselecteerdeMedicijnen.length === 0) {
+        alert("Voeg minstens één medicijn toe.");
+        medicijnInvoer.focus();
+        return;
+      }
+
+      const bestemming = bestemmingVeld.value;
+
+      const opdracht = {
+        startlocatie: "B303",
+        bestemming: bestemming,
+        medicijnen: geselecteerdeMedicijnen.map(function (item) {
+          return { naam: item.naam, aantal: item.aantal };
+        })
+      };
+
+      verzendknop.disabled = true;
+      toevoegknop.disabled = true;
+      medicijnInvoer.disabled = true;
+      aantalInvoer.disabled = true;
+      bestemmingVeld.disabled = true;
+      robotstatus.textContent = "Levering controleren...";
+
+      let response;
+      let antwoord;
+
+      try {
+        response = await apiFetch("/leveringen", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(opdracht)
+        });
+        antwoord = await response.json();
+      } catch (error) {
+        robotstatus.textContent = "Kan geen verbinding maken met de server.";
+        verzendknop.disabled = false;
+        toevoegknop.disabled = false;
+        medicijnInvoer.disabled = false;
+        aantalInvoer.disabled = false;
+        bestemmingVeld.disabled = false;
+        return;
+      }
+
+      if (!response.ok) {
+        robotstatus.textContent = antwoord.detail || "Levering kon niet worden aangemaakt.";
+        verzendknop.disabled = false;
+        toevoegknop.disabled = false;
+        medicijnInvoer.disabled = false;
+        aantalInvoer.disabled = false;
+        bestemmingVeld.disabled = false;
+        return;
+      }
+
+      voorraadstatus.textContent = "Geen melding";
+      robotstatus.textContent = `Levering #${antwoord.id} aangemaakt. Robot is onderweg naar ${bestemming}`;
+      laadVoorraad();
+
+      clearTimeout(aankomstTimer);
+
+      // Alleen voor de demo: na 5 seconden tonen we "aangekomen".
+      aankomstTimer = setTimeout(function () {
+        robotstatus.textContent = `Robot is aangekomen in ${bestemming}`;
+
+        verzendknop.disabled = false;
+        toevoegknop.disabled = false;
+        medicijnInvoer.disabled = false;
+        aantalInvoer.disabled = false;
+        bestemmingVeld.disabled = false;
+
+        aankomstTimer = null;
+        toonMedicijnen();
+      }, 5000);
+
+      toonMedicijnen();
+    });
+
+    voorraadknop.addEventListener("click", function () {
+      const medicijn = voorraadMedicijn.value;
+
+      if (!medicijn) {
+        voorraadstatus.textContent =
+          "Vraag eerst een levering aan met minstens één medicijn.";
+        return;
+      }
+
+      voorraadstatus.textContent = `${medicijn} is op`;
+    });
+
+    aanvulknop.addEventListener("click", async function () {
+      const medicijnId = aanvulMedicijn.value;
+      const aantal = Number(aanvulAantal.value);
+
+      if (!medicijnId || !Number.isSafeInteger(aantal) || aantal < 1) {
+        aanvulStatus.textContent = "Kies een medicijn en een geldig aantal.";
+        return;
+      }
+
+      aanvulknop.disabled = true;
+      aanvulStatus.textContent = "Voorraad aanvullen...";
+
+      try {
+        const response = await apiFetch(`/voorraad/${medicijnId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ aantal: aantal })
+        });
+        const antwoord = await response.json();
+
+        if (!response.ok) {
+          throw new Error(antwoord.detail || "Voorraad kon niet worden aangevuld.");
+        }
+
+        aanvulStatus.textContent = "Voorraad handmatig aangevuld.";
+        aanvulAantal.value = "1";
+        await laadVoorraad();
+      } catch (error) {
+        aanvulStatus.textContent = error.message;
+      } finally {
+        aanvulknop.disabled = false;
+      }
+    });
+
+    document.getElementById("materiaalFormulier").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const status = document.getElementById("materiaalStatus");
+      const button = event.currentTarget.querySelector("button");
+      button.disabled = true;
+      try {
+        const response = await apiFetch("/medicijnen", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            naam: document.getElementById("materiaalNaam").value.trim(),
+            minimum_voorraad: Number(document.getElementById("materiaalMinimum").value),
+            aantal: Number(document.getElementById("materiaalAantal").value)
+          })
+        });
+        if (!response.ok) throw new Error("Materiaal kon niet worden toegevoegd: " + JSON.stringify((await response.json()).detail));
+        document.getElementById("materiaalFormulier").reset();
+        status.textContent = "Materiaal toegevoegd.";
+        await laadVoorraad();
+      } catch (error) { status.textContent = error.message; }
+      finally { button.disabled = false; }
+    });
+
+    document.getElementById("uitloggen").addEventListener("click", async () => {
+      try {
+        const response = await apiFetch("/auth/logout", { method: "POST" });
+        if (!response.ok) throw new Error("Uitloggen mislukt.");
+        const result = await response.json();
+        location.assign(result.logout_url);
+      } catch (error) { alert("Uitloggen mislukt. Probeer opnieuw."); }
+    });
+
+    async function start() {
+      try {
+        const response = await fetch("/auth/me");
+        if (response.status === 401) return;
+        if (!response.ok) throw new Error("Account kon niet worden geladen.");
+        account = await response.json();
+        document.getElementById("aanmelden").hidden = true;
+        document.getElementById("appInhoud").hidden = false;
+        document.getElementById("accountInfo").textContent = `Ingelogd als ${account.name} (${account.role})`;
+        document.querySelectorAll("[data-admin]").forEach(element => {
+          element.hidden = account.role !== "admin";
+        });
+        await laadVoorraad();
+      } catch (error) {
+        document.getElementById("loginStatus").textContent = "Kan geen verbinding maken met de server.";
+      }
+    }
+    start();
+  </script>
+</body>
+</html>
