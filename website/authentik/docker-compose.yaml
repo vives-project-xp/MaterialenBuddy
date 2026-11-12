@@ -1,0 +1,37 @@
+services:
+  authentik:
+    image: ghcr.io/goauthentik/server:2025.10.1
+    restart: unless-stopped
+    command: server
+    environment:
+      - AUTHENTIK_SECRET_KEY=${AUTHENTIK_SECRET_KEY:-materialenbuddy_authentik_dev_key}
+      # NB: dubbele underscore ("__") tussen sectie en key — authentik vertaalt
+      # AUTHENTIK_POSTGRESQL__HOST naar de config-sleutel postgresql.host.
+      # Met een enkele underscore zou de override verzwijgen (host blijft dan
+      # "localhost" uit de defaults) en kan authentik niet starten.
+      - AUTHENTIK_POSTGRESQL__HOST=postgres
+      - AUTHENTIK_POSTGRESQL__PORT=5432
+      - AUTHENTIK_POSTGRESQL__USER=authentik
+      - AUTHENTIK_POSTGRESQL__PASSWORD=${AUTHENTIK_POSTGRES_PASSWORD:-materialenbuddy_authentik_dev_password}
+      - AUTHENTIK_POSTGRESQL__NAME=authentik
+    ports:
+      - "9000:9000"
+      - "9443:9443"
+    volumes:
+      - authentik_config:/etc/authentik/custom
+    depends_on:
+      - postgres
+
+  postgres:
+    image: docker.io/library/postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=authentik
+      - POSTGRES_USER=authentik
+      - POSTGRES_PASSWORD=${AUTHENTIK_POSTGRES_PASSWORD:-materialenbuddy_authentik_dev_password}
+    volumes:
+      - authentik_pg_data:/var/lib/postgresql/data
+
+volumes:
+  authentik_config:
+  authentik_pg_data:

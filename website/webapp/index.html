@@ -119,11 +119,40 @@
       padding-left: 0;
       list-style: none;
     }
+
+    .authbalk {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+      padding: 12px 14px;
+      background: #edf3f8;
+      border-radius: 6px;
+    }
+
+    .authbalk .inlogknop {
+      width: auto;
+      margin: 0;
+      padding: 8px 18px;
+    }
+
+    .verborgen {
+      display: none !important;
+    }
   </style>
 </head>
 
 <body>
   <main>
+    <div class="authbalk">
+      <span id="authStatus">Aan het inloggen...</span>
+      <a id="loginKnop" class="inlogknop" href="/auth/login" hidden>Inloggen</a>
+      <button id="uitlogKnop" class="inlogknop secundair" type="button" hidden>
+        Uitloggen
+      </button>
+    </div>
+
     <h1>Medicijnlevering</h1>
     <p>Centrale locatie: <strong>B303</strong></p>
     <p>Demoversie — nog niet verbonden met de robot.</p>
@@ -134,7 +163,7 @@
       <ul id="voorraadLijst" class="voorraadlijst"></ul>
     </section>
 
-    <section class="melding">
+    <section class="melding" id="aanvulSectie" hidden>
       <h2>Voorraad aanvullen</h2>
       <div class="voorraadAanvullen">
         <div>
@@ -152,6 +181,31 @@
         Voorraad aanvullen
       </button>
       <p id="aanvulStatus" aria-live="polite"></p>
+    </section>
+
+    <section class="melding" id="beheerSectie" hidden>
+      <h2>Nieuw product toevoegen</h2>
+      <div class="voorraadAanvullen">
+        <div>
+          <label for="nieuwMedicijnNaam">Productnaam</label>
+          <input id="nieuwMedicijnNaam" type="text" placeholder="Bijvoorbeeld: Ibuprofen 200mg">
+        </div>
+        <div>
+          <label for="nieuwMedicijnMinimum">Minimum voorraad</label>
+          <input id="nieuwMedicijnMinimum" type="number" min="0" step="1" value="0">
+        </div>
+        <div>
+          <label for="nieuwMedicijnVoorraad">Voorraad</label>
+          <input id="nieuwMedicijnVoorraad" type="number" min="0" step="1" value="0">
+        </div>
+      </div>
+      <button id="nieuwMedicijnKnop" class="secundair" type="button">
+        Product toevoegen
+      </button>
+      <p id="beheerStatus" aria-live="polite"></p>
+      <h2>Uitgefaseerde producten</h2>
+      <ul id="uitgefaseerdLijst"></ul>
+      <p id="uitgefaseerdLeeg" hidden>Er zijn momenteel geen uitgefaseerde producten.</p>
     </section>
 
     <form id="leveringFormulier">
@@ -218,6 +272,10 @@
   </main>
 
   <script>
+    const authStatus = document.getElementById("authStatus");
+    const loginKnop = document.getElementById("loginKnop");
+    const uitlogKnop = document.getElementById("uitlogKnop");
+    const aanvulSectie = document.getElementById("aanvulSectie");
     const formulier = document.getElementById("leveringFormulier");
     const bestemmingVeld = document.getElementById("bestemming");
     const medicijnInvoer = document.getElementById("medicijnInvoer");
@@ -233,16 +291,79 @@
     const aanvulAantal = document.getElementById("aanvulAantal");
     const aanvulknop = document.getElementById("aanvulknop");
     const aanvulStatus = document.getElementById("aanvulStatus");
+    const beheerSectie = document.getElementById("beheerSectie");
+    const nieuwMedicijnNaam = document.getElementById("nieuwMedicijnNaam");
+    const nieuwMedicijnMinimum = document.getElementById("nieuwMedicijnMinimum");
+    const nieuwMedicijnVoorraad = document.getElementById("nieuwMedicijnVoorraad");
+    const nieuwMedicijnKnop = document.getElementById("nieuwMedicijnKnop");
+    const beheerStatus = document.getElementById("beheerStatus");
+    const uitgefaseerdLijst = document.getElementById("uitgefaseerdLijst");
+    const uitgefaseerdLeeg = document.getElementById("uitgefaseerdLeeg");
     const verzendknop = document.getElementById("verzendknop");
     const voorraadMedicijn = document.getElementById("voorraadMedicijn");
     const voorraadknop = document.getElementById("voorraadknop");
 
     let geselecteerdeMedicijnen = [];
     let aankomstTimer = null;
+    let isStaff = false;
+
+    // Verwijst door naar de inloginstap wanneer een API-oproep 401 oplevert.
+    function verwerk401(response) {
+      if (response.status === 401) {
+        window.location.href = "/auth/login";
+        return true;
+      }
+      return false;
+    }
+
+    // Toont de inlogstatus en de staff-geachte gebieden op basis van /auth/me.
+    async function laadAuth() {
+      try {
+        const response = await fetch("/auth/me");
+        const sessie = await response.json();
+
+        if (sessie.authenticated) {
+          isStaff = Boolean(sessie.staff);
+          authStatus.textContent = `Aangemeld als ${sessie.name}`;
+          loginKnop.hidden = true;
+          uitlogKnop.hidden = false;
+          aanvulSectie.hidden = !isStaff;
+          beheerSectie.hidden = !isStaff;
+          if (isStaff) {
+            laadUitgefaseerde();
+          }
+        } else {
+          isStaff = false;
+          authStatus.textContent = "Niet aangemeld";
+          loginKnop.hidden = false;
+          uitlogKnop.hidden = true;
+          aanvulSectie.hidden = true;
+          beheerSectie.hidden = true;
+        }
+      } catch (error) {
+        isStaff = false;
+        authStatus.textContent = "Niet aangemeld";
+        loginKnop.hidden = false;
+        uitlogKnop.hidden = true;
+        aanvulSectie.hidden = true;
+        beheerSectie.hidden = true;
+      }
+    }
+
+    uitlogKnop.addEventListener("click", function () {
+      // Browser navigatie naar de GET-logout: deze wist de lokale cookie en
+      // redirect naar de Authentik end-session endpoint, zodat óók de
+      // Authentik-browsersessie wordt beëindigd. Alleen een fetch/POST zou de
+      // Authentik-sessie laten leven en bij de volgende login direct herkennen.
+      window.location.href = "/auth/logout";
+    });
 
     async function laadVoorraad() {
       try {
         const response = await fetch("/voorraad");
+        if (verwerk401(response)) {
+          return;
+        }
         const voorraad = await response.json();
 
         if (!response.ok) {
@@ -278,7 +399,20 @@
             aantal.textContent += " — lage voorraad";
           }
 
-          rij.append(naam, aantal);
+          if (isStaff) {
+            const uitfaseerKnop = document.createElement("button");
+            uitfaseerKnop.type = "button";
+            uitfaseerKnop.className = "verwijderknop";
+            uitfaseerKnop.textContent = "Uitfaseren";
+            uitfaseerKnop.dataset.medicijnId = item.id;
+            uitfaseerKnop.addEventListener("click", function () {
+              faseerMedicijnUit(item.id, item.naam);
+            });
+            rij.append(naam, aantal, uitfaseerKnop);
+          } else {
+            rij.append(naam, aantal);
+          }
+
           voorraadLijst.appendChild(rij);
 
           const aanvulOptie = document.createElement("option");
@@ -406,6 +540,9 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(opdracht)
         });
+        if (verwerk401(response)) {
+          return;
+        }
         antwoord = await response.json();
       } catch (error) {
         robotstatus.textContent = "Kan geen verbinding maken met de server.";
@@ -480,6 +617,10 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ aantal: aantal })
         });
+        if (verwerk401(response)) {
+          aanvulknop.disabled = false;
+          return;
+        }
         const antwoord = await response.json();
 
         if (!response.ok) {
@@ -496,6 +637,127 @@
       }
     });
 
+    async function faseerMedicijnUit(medicijnId, naam) {
+      const bevestig = window.confirm(
+        `Weet je zeker dat je "${naam}" wilt uitfaseren? ` +
+          `Het verdwijnt uit de voorraad, maar de historie wordt bewaard.`
+      );
+      if (!bevestig) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/medicijnen/${medicijnId}`, { method: "DELETE" });
+        if (verwerk401(response)) {
+          return;
+        }
+        if (response.status === 403) {
+          beheerStatus.textContent = "Alleen staff-leden kunnen producten uitfaseren.";
+          return;
+        }
+        if (response.ok) {
+          beheerStatus.textContent = `Product "${naam}" is uitgefaseerd.`;
+          await laadVoorraad();
+          await laadUitgefaseerde();
+        } else {
+          const fout = await response.json().catch(() => ({ detail: "Onbekende fout." }));
+          beheerStatus.textContent = fout.detail || "Uitfaseren is niet geslaagd.";
+        }
+      } catch (error) {
+        beheerStatus.textContent = "Onbekende fout bij het uitfaseren.";
+      }
+    }
+
+    // Toont de uitgefaseerde producten (alleen staff).
+    async function laadUitgefaseerde() {
+      if (!isStaff) {
+        return;
+      }
+      try {
+        const response = await fetch("/medicijnen/uitgefaseerd");
+        if (verwerk401(response)) {
+          return;
+        }
+        if (!response.ok) {
+          throw new Error("Uitgefaseerde producten konden niet worden geladen.");
+        }
+        const producten = await response.json();
+
+        uitgefaseerdLijst.replaceChildren();
+        if (producten.length === 0) {
+          uitgefaseerdLeeg.hidden = false;
+          return;
+        }
+        uitgefaseerdLeeg.hidden = true;
+
+        producten.forEach(function (item) {
+          const rij = document.createElement("li");
+          rij.className = "voorraaditem";
+          const naam = document.createElement("span");
+          naam.textContent = item.naam;
+          rij.append(naam);
+          uitgefaseerdLijst.appendChild(rij);
+        });
+      } catch (error) {
+        uitgefaseerdLijst.replaceChildren();
+        uitgefaseerdLeeg.hidden = false;
+      }
+    }
+
+    nieuwMedicijnKnop.addEventListener("click", async function () {
+      const naam = nieuwMedicijnNaam.value.trim();
+      const minimum = parseInt(nieuwMedicijnMinimum.value, 10);
+      const voorraad = parseInt(nieuwMedicijnVoorraad.value, 10);
+
+      if (!naam) {
+        beheerStatus.textContent = "Vul een productnaam in.";
+        nieuwMedicijnNaam.focus();
+        return;
+      }
+
+      nieuwMedicijnKnop.disabled = true;
+      beheerStatus.textContent = "Product toevoegen...";
+
+      try {
+        const response = await fetch("/medicijnen", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            naam: naam,
+            minimum_voorraad: Number.isInteger(minimum) && minimum >= 0 ? minimum : 0,
+            voorraad: Number.isInteger(voorraad) && voorraad >= 0 ? voorraad : 0,
+          }),
+        });
+        if (verwerk401(response)) {
+          return;
+        }
+        if (response.status === 403) {
+          beheerStatus.textContent = "Alleen staff-leden kunnen producten toevoegen.";
+          return;
+        }
+        if (response.status === 409) {
+          beheerStatus.textContent =
+            "Een product met die naam bestaat al. Kies een andere naam.";
+          return;
+        }
+        if (response.ok) {
+          beheerStatus.textContent = `Product "${naam}" is toegevoegd.`;
+          nieuwMedicijnNaam.value = "";
+          nieuwMedicijnMinimum.value = "0";
+          nieuwMedicijnVoorraad.value = "0";
+          await laadVoorraad();
+        } else {
+          const fout = await response.json().catch(() => ({ detail: "Onbekende fout." }));
+          beheerStatus.textContent = fout.detail || "Toevoegen is niet geslaagd.";
+        }
+      } catch (error) {
+        beheerStatus.textContent = "Onbekende fout bij het toevoegen.";
+      } finally {
+        nieuwMedicijnKnop.disabled = false;
+      }
+    });
+
+    laadAuth();
     laadVoorraad();
   </script>
 </body>

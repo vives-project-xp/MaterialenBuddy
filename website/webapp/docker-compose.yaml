@@ -20,8 +20,19 @@ services:
   web:
     build: .
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       DATABASE_URL: mysql+pymysql://materialenbuddy_app:${MYSQL_PASSWORD:-materialenbuddy_dev_password}@db:3306/materialenbuddy
+      # ISSUER: vanaf waar de webapp-server naar Authentik praat (server-to-server).
+      # In Docker is de host bereikbaar via host.docker.internal; lokaal (zonder Docker) is het localhost.
+      AUTHENTIK_ISSUER: ${AUTHENTIK_ISSUER:-http://host.docker.internal:9000}
+      AUTHENTIK_CLIENT_ID: ${AUTHENTIK_CLIENT_ID:-materialenbuddy}
+      AUTHENTIK_CLIENT_SECRET: ${AUTHENTIK_CLIENT_SECRET:-}
+      # Redirect-URI: de URL waarmee de BROWSER naar de webapp terugkeert (blijft op localhost).
+      AUTHENTIK_REDIRECT_URI: ${AUTHENTIK_REDIRECT_URI:-http://localhost:8000/auth/callback}
+      SESSION_SECRET: ${SESSION_SECRET:-}
+      SESSION_MAX_AGE_SECONDS: ${SESSION_MAX_AGE_SECONDS:-28800}
     ports:
       - "8000:8000"
     depends_on:

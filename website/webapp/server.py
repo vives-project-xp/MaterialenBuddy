@@ -3,11 +3,13 @@ from pathlib import Path
 from typing import Any
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, text
+
+import auth
 
 
 BASE_DIR = Path(__file__).parent
@@ -18,13 +20,44 @@ if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL ontbreekt. Maak een .env-bestand aan.")
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+
+
+def _ensure_schema() -> None:
+    """Brengt het schema up-to-date voor bestaande databases.
+
+    Draait idempotent bij elke opstart, zodat een lopende installatie (waar de
+    initdb-scripts niet opnieuw draaien) ook nieuwe kolommen krijgt.
+    """
+    with engine.connect() as connection:
+        kolommen = connection.execute(
+            text(
+                "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS "
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'medicijnen'"
+            )
+        ).mappings().all()
+        namen = {row["COLUMN_NAME"] for row in kolommen}
+        if "actief" not in namen:
+            connection.execute(
+                text(
+                    "ALTER TABLE medicijnen "
+                    "ADD COLUMN actief BOOLEAN NOT NULL DEFAULT TRUE"
+                )
+            )
+            connection.commit()
+
+
+_ensure_schema()
+
 app = FastAPI(title="MaterialenBuddy voorraad API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=True,
 )
+
+app.include_router(auth.router)
 
 
 class LeveringMedicijn(BaseModel):
@@ -42,13 +75,28 @@ class VoorraadAanvulling(BaseModel):
     aantal: int = Field(gt=0)
 
 
+class NieuwMedicijn(BaseModel):
+    naam: str = Field(min_length=1, max_length=150)
+    minimum_voorraad: int = Field(ge=0, default=0)
+    voorraad: int = Field(ge=0, default=0)
+
+
 @app.get("/", include_in_schema=False)
 async def index() -> FileResponse:
-    return FileResponse(BASE_DIR / "index.html")
+    return FileResponse(
+        BASE_DIR / "index.html",
+        headers={
+            "Cache-Control": "no-store, no-cache, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
 
 
 @app.get("/medicijnen")
-def medicijnen() -> list[dict[str, Any]]:
+def medicijnen(
+    sessie: dict[str, Any] = Depends(auth.require_auth),
+) -> list[dict[str, Any]]:
     with engine.connect() as connection:
         rows = connection.execute(
             text("""
@@ -56,6 +104,7 @@ def medicijnen() -> list[dict[str, Any]]:
                        COALESCE(v.aantal, 0) AS aantal
                 FROM medicijnen m
                 LEFT JOIN voorraad v ON v.medicijn_id = m.id
+                WHERE m.actief = TRUE
                 ORDER BY m.naam
             """)
         ).mappings()
@@ -63,14 +112,17 @@ def medicijnen() -> list[dict[str, Any]]:
 
 
 @app.get("/voorraad")
-def voorraad() -> list[dict[str, Any]]:
-    return medicijnen()
+def voorraad(
+    sessie: dict[str, Any] = Depends(auth.require_auth),
+) -> list[dict[str, Any]]:
+    return medicijnen(sessie=sessie)
 
 
 @app.post("/voorraad/{medicijn_id}")
 def voorraad_aanvullen(
     medicijn_id: int,
     aanvulling: VoorraadAanvulling,
+    sessie: dict[str, Any] = Depends(auth.require_staff),
 ) -> dict[str, Any]:
     with engine.begin() as connection:
         medicijn = connection.execute(
@@ -119,8 +171,101 @@ def voorraad_aanvullen(
     return {"medicijn_id": medicijn_id, "toegevoegd": aanvulling.aantal}
 
 
+@app.post("/medicijnen", status_code=201)
+def medicijn_toevoegen(
+    medicijn: NieuwMedicijn,
+    sessie: dict[str, Any] = Depends(auth.require_staff),
+) -> dict[str, Any]:
+    """Voegt een nieuw voorraadproduct toe (staff-only)."""
+    with engine.begin() as connection:
+        resultaat = connection.execute(
+            text(
+                """
+                INSERT INTO medicijnen (naam, minimum_voorraad, actief)
+                VALUES (:naam, :minimum_voorraad, TRUE)
+                """
+            ),
+            {
+                "naam": medicijn.naam.strip(),
+                "minimum_voorraad": medicijn.minimum_voorraad,
+            },
+        )
+        medicijn_id = resultaat.lastrowid
+
+        if medicijn.voorraad > 0:
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO voorraad (medicijn_id, aantal)
+                    VALUES (:medicijn_id, :aantal)
+                    """
+                ),
+                {"medicijn_id": medicijn_id, "aantal": medicijn.voorraad},
+            )
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO voorraad_mutaties
+                        (medicijn_id, verschil, reden)
+                    VALUES (:medicijn_id, :verschil, :reden)
+                    """
+                ),
+                {
+                    "medicijn_id": medicijn_id,
+                    "verschil": medicijn.voorraad,
+                    "reden": "Voorraad geïnitieerd bij aanmaak",
+                },
+            )
+
+    return {
+        "naam": medicijn.naam.strip(),
+        "minimum_voorraad": medicijn.minimum_voorraad,
+        "voorraad": medicijn.voorraad,
+    }
+
+
+@app.delete("/medicijnen/{medicijn_id}")
+def medicijn_uitfaseren(
+    medicijn_id: int,
+    sessie: dict[str, Any] = Depends(auth.require_staff),
+) -> dict[str, Any]:
+    """Faseert een product uit: verdwijnt uit de voorraad, historiek blijft intact.
+
+    We markeren het product inactief in plaats van het te wissen, zodat de
+    audit-tables (voorraad_mutaties, leveringen) hun referentie behouden.
+    """
+    with engine.begin() as connection:
+        resultaat = connection.execute(
+            text("UPDATE medicijnen SET actief = FALSE WHERE id = :id"),
+            {"id": medicijn_id},
+        )
+        if resultaat.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Medicijn niet gevonden")
+    return {"medicijn_id": medicijn_id, "actief": False}
+
+
+@app.get("/medicijnen/uitgefaseerd")
+def medicijnen_uitgefaseerd(
+    sessie: dict[str, Any] = Depends(auth.require_staff),
+) -> list[dict[str, Any]]:
+    """Lijst de uitgefaseerde (inactieve) producten op (staff-only)."""
+    with engine.connect() as connection:
+        rows = connection.execute(
+            text("""
+                SELECT m.id, m.naam
+                FROM medicijnen m
+                WHERE m.actief = FALSE
+                ORDER BY m.naam
+            """)
+        ).mappings()
+        return [dict(row) for row in rows]
+
+
 @app.post("/leveringen", status_code=201)
-def levering_aanmaken(aanvraag: LeveringAanvraag) -> dict[str, Any]:
+def levering_aanmaken(
+    aanvraag: LeveringAanvraag,
+    sessie: dict[str, Any] = Depends(auth.require_auth),
+) -> dict[str, Any]:
     with engine.begin() as connection:
         levering = connection.execute(
             text("""
@@ -192,7 +337,10 @@ def levering_aanmaken(aanvraag: LeveringAanvraag) -> dict[str, Any]:
 
 
 @app.get("/leveringen/{levering_id}")
-def levering_ophalen(levering_id: int) -> dict[str, Any]:
+def levering_ophalen(
+    levering_id: int,
+    sessie: dict[str, Any] = Depends(auth.require_auth),
+) -> dict[str, Any]:
     with engine.connect() as connection:
         row = connection.execute(
             text("""
