@@ -16,4 +16,14 @@ For task distribution and to keep track of who is responsible for each task, the
 ### To Do
 - Continue testing Authentik and integrate it into a website.
 - Research and test the Raspberry Pi camera on the robot.
-- Further develop the robot's mapping system.
+- Further develop the robot's mapping system. 
+
+## SCRUM Meeting 2
+**Date:** 12/11/2026
+
+### Done
+- Research and test the Raspberry Pi camera on the robot.
+### To Do
+- Continue testing Authentik and integrate it into a website.
+- Further develop the robot's mapping system. 
+- Research and test the ladar camera on the robot
