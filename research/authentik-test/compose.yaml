@@ -1,0 +1,19 @@
+services:
+  website:
+    image: nginx:alpine
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+    networks:
+      - authentik
+
+  adminwebsite:
+    image: nginx:alpine
+    volumes:
+      - ./admin.html:/usr/share/nginx/html/index.html:ro
+    networks:
+      - authentik
+
+networks:
+  authentik:
+    external: true
+    name: authentik-server_default
