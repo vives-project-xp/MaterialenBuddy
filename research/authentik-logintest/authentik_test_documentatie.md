@@ -305,9 +305,9 @@ Dat is een toekomstige uitbreiding, geen onderdeel dat al werkt.
 
 Bewaar minstens:
 
-- `authentik-test/index.html` en eventuele `admin.html`.
-- De **actuele** `authentik-test/compose.yaml`.
-- De **actuele** `authentik-server/compose.yml`.
+- [`index.html`](authentik-test/index.html) en [`admin.html`](authentik-test/admin.html) van de testwebsite.
+- De **actuele** [`compose.yaml` van de testwebsite](authentik-test/compose.yaml).
+- De **actuele** [`compose.yml` van de Authentik-server](authentik-server/compose.yml).
 - Een voorbeeldbestand `.env.example` **zonder echte wachtwoorden of sleutels**.
 - De ingestelde authentik-applicaties, providers, groepsbindingen en outpostkoppelingen (eventueel met screenshots of een veilige export).
 - Een overzicht van de Docker-netwerken en gebruikte poorten.

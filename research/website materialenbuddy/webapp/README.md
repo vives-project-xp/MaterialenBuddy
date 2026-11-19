@@ -103,7 +103,7 @@ Het wachtwoord hoort alleen lokaal in `.env` te staan. Deel dit bestand niet en 
 
 ## Installatie
 
-Open PowerShell in de map `website/webapp`:
+Open PowerShell in de map `research/website materialenbuddy/webapp`:
 
 ```powershell
 python -m venv .venv
@@ -112,8 +112,10 @@ python -m venv .venv
 
 ## Website starten
 
+Voer dit uit vanuit de hoofdmap van de repository:
+
 ```powershell
-cd "C:\Users\Gebruiker\Documents\3de jaar\MaterialenBuddy\website\webapp"
+cd "research\website materialenbuddy\webapp"
 .\.venv\Scripts\python.exe -m uvicorn server:app --host 127.0.0.1 --port 8000
 ```
 
@@ -127,14 +129,14 @@ De terminal moet open blijven zolang de website draait. Stop de server met `Ctrl
 
 ## Starten met Docker
 
-Docker start automatisch zowel MySQL als de FastAPI-webapp. Open PowerShell in deze map:
+Docker start automatisch zowel MySQL als de FastAPI-webapp. Voer dit uit vanuit de hoofdmap van de repository:
 
 ```powershell
-cd "C:\Users\Gebruiker\Documents\3de jaar\MaterialenBuddy\website\webapp"
+cd "research\website materialenbuddy\webapp"
 docker compose up --build
 ```
 
-Open daarna http://127.0.0.1:8000/. De database wordt bij de eerste start aangemaakt met het schema uit `website/database/materialenbuddy_test_database.sql` en testdata uit `website/database/02-seed.sql`.
+Open daarna http://127.0.0.1:8000/. De database wordt bij de eerste start aangemaakt met het [schema](../database/materialenbuddy_test_database.sql) en de [testdata](../database/02-seed.sql) uit dit prototype.
 
 Stop de containers met:
 
