@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>hrobot_bringup</name>
+  <version>0.1.0</version>
+  <description>Arranque del robot real: LiDAR LD19, descripción y nodos auxiliares (scan_resampler, odom_relay).</description>
+  <maintainer email="tu_correo@ejemplo.com">Brandon</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>irobot_create_description</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <!--
+    Driver del LD19: `ldlidar_stl_ros2` (LDRobot, MIT). NO es una clave de rosdep, pero está incluido
+    en este repositorio (src/ldlidar_stl_ros2/, ver su VENDORED.md), así que colcon lo compila solo.
+  -->
+  <exec_depend>ldlidar_stl_ros2</exec_depend>
+
+  <!-- Las dependencias de slam_toolbox y Nav2 se añaden en los pasos 3 y 4. -->
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
