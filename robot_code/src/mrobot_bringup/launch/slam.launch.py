@@ -3,7 +3,9 @@
 Included by `mapping.launch.py` (real robot) and by the simulation.
 
 Arguments: robot_namespace (env CREATE3_ROBOT_NAMESPACE or 'r2'; empty = none), use_sim_time (false),
-rviz (true).
+rviz (true), posegraph ('' = start an empty map; otherwise the path WITHOUT extension of a saved
+.posegraph/.data pair: slam_toolbox loads it and keeps extending it), initial_x / initial_y / initial_yaw
+(robot pose in that map when it is loaded; 0 0 0 = the map origin).
 
 Namespace: PushRosNamespace (GroupAction) around slam_toolbox and rviz2, which are the nodes created here.
 TF is remapped to <ns>/tf and <ns>/tf_static and the YAML is rewritten with RewrittenYaml(root_key=<ns>);
@@ -61,6 +63,20 @@ def _setup(context, *args, **kwargs):
         slam_remaps += [("/map", f"/{namespace}/map"),
                         ("/map_metadata", f"/{namespace}/map_metadata")]
 
+    # Resume a saved map: slam_toolbox deserializes the pose graph when it configures and keeps mapping on it.
+    extra = {}
+    posegraph = LaunchConfiguration("posegraph").perform(context).strip()
+    if posegraph:
+        posegraph = os.path.abspath(os.path.expanduser(posegraph))
+        for ext in ("posegraph", "data"):
+            if not os.path.isfile(f"{posegraph}.{ext}"):
+                raise RuntimeError(f"{posegraph}.{ext} does not exist (generate it with scripts/save_map.sh).")
+        extra = {
+            "map_file_name": posegraph,
+            "map_start_pose": [float(LaunchConfiguration(k).perform(context))
+                               for k in ("initial_x", "initial_y", "initial_yaw")],
+        }
+
     # namespace="" because the namespace comes from PushRosNamespace (LifecycleNode requires a str).
     slam_node = LifecycleNode(
         package="slam_toolbox",
@@ -68,7 +84,7 @@ def _setup(context, *args, **kwargs):
         name="slam_toolbox",
         namespace="",
         output="screen",
-        parameters=[slam_yaml, {"use_sim_time": use_sim_time}],
+        parameters=[slam_yaml, {"use_sim_time": use_sim_time}, extra],
         remappings=slam_remaps,
     )
 
@@ -121,6 +137,10 @@ def generate_launch_description():
             DeclareLaunchArgument("use_sim_time", default_value="false"),
             DeclareLaunchArgument(
                 "rviz", default_value="true", description="true|false"),
+            DeclareLaunchArgument("posegraph", default_value=""),
+            DeclareLaunchArgument("initial_x", default_value="0.0"),
+            DeclareLaunchArgument("initial_y", default_value="0.0"),
+            DeclareLaunchArgument("initial_yaw", default_value="0.0"),
             OpaqueFunction(function=_setup),
         ]
     )

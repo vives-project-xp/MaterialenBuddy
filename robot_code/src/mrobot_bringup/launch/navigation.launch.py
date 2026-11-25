@@ -62,6 +62,7 @@ def generate_launch_description():
             "initial_y": LaunchConfiguration("initial_y"),
             "initial_yaw": LaunchConfiguration("initial_yaw"),
             "odom_topic": "odom_reliable",
+            "live_mapping": LaunchConfiguration("live_mapping"),
         }.items(),
     )
 
@@ -89,6 +90,9 @@ def generate_launch_description():
                 description="true = AMCL starts at initial_x/y/yaw (by default the map origin, the dock). "
                 "false = set the pose with 2D Pose Estimate in RViz.",
             ),
+            DeclareLaunchArgument(
+                "live_mapping", default_value="true",
+                description="true = slam_toolbox keeps updating the map while navigating; false = static map + AMCL."),
             DeclareLaunchArgument("initial_x", default_value="0.0"),
             DeclareLaunchArgument("initial_y", default_value="0.0"),
             DeclareLaunchArgument("initial_yaw", default_value="0.0"),

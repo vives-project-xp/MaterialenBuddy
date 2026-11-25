@@ -172,6 +172,7 @@ def generate_launch_description():
             "use_sim_time": "true",
             "map_yaml": LaunchConfiguration("map_yaml"),
             "rviz": LaunchConfiguration("rviz"),
+            "live_mapping": LaunchConfiguration("live_mapping"),
             "set_initial_pose": "true",
             "initial_x": LaunchConfiguration("x"),
             "initial_y": LaunchConfiguration("y"),
@@ -197,6 +198,9 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "map_yaml", default_value="", description="With nav:=true: absolute path to the map .yaml."
+            ),
+            DeclareLaunchArgument(
+                "live_mapping", default_value="true", description="With nav:=true: keep mapping (slam_toolbox) instead of AMCL."
             ),
             DeclareLaunchArgument("x", default_value="0.0"),
             DeclareLaunchArgument("y", default_value="0.0"),

@@ -111,7 +111,11 @@ ros2 launch mrobot_bringup navigation.launch.py map_yaml:=$PWD/maps/map1.yaml li
 
 On your PC: `scripts/rviz_remote.sh navigation`. The goal is given with RViz's **2D Goal Pose** tool.
 
-AMCL starts at `initial_x/y/yaw` (`0 0 0` by default, the map origin). If the robot is somewhere else, pass those
+By default (`live_mapping:=true`) `slam_toolbox` loads the saved pose graph (`map1.posegraph/.data`, next to the `.yaml`) and
+**keeps mapping while navigating**, so new objects update the global map and costmap. Use `live_mapping:=false` for the
+classic static map + AMCL.
+
+The robot starts at `initial_x/y/yaw` (`0 0 0` by default, the map origin). If the robot is somewhere else, pass those
 arguments or `set_initial_pose:=false` and use **2D Pose Estimate** in RViz.
 
 ### Useful arguments
@@ -123,6 +127,7 @@ arguments or `set_initial_pose:=false` and use **2D Pose Estimate** in RViz.
 | `laser_yaw` | mapping, navigation | Sensor rotation relative to the robot front (rad). `-1.5707963` was used with the real sensor |
 | `robot_namespace` | all | Robot namespace (default `r2`; empty = none) |
 | `rviz` | all | `false` to not open RViz (on the Pi) |
+| `live_mapping` | navigation | `true` (default): keep mapping with slam_toolbox while navigating; `false`: static map + AMCL |
 | `map_yaml` | navigation | Absolute path to the map `.yaml` (required) |
 
 ## Simulation (on a PC)

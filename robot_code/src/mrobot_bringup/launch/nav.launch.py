@@ -2,12 +2,16 @@
 
 Included by `navigation.launch.py` (real robot) and by the simulation.
 
-Localization: map_server (saved map) + AMCL, which publishes map -> odom. slam_toolbox does not run.
+Localization, two modes (live_mapping):
+  * live_mapping:=true (default): slam_toolbox loads the saved pose graph (<map>.posegraph/.data, next to map_yaml)
+    and KEEPS MAPPING while navigating: it publishes /map and map -> odom, so new objects update the global
+    costmap. map_server and AMCL do not run.
+  * live_mapping:=false: map_server (saved map, static) + AMCL, which publishes map -> odom.
 
 Arguments: robot_namespace (env CREATE3_ROBOT_NAMESPACE or 'r2'; empty = none), use_sim_time (false),
 map_yaml (absolute path to the map .yaml; required), rviz (true), params_file (config/nav2_params.yaml),
 autostart (true), odom_topic ('odom'; 'odom_reliable' on the real robot, see odom_relay.py),
-set_initial_pose (false), initial_x / initial_y / initial_yaw (0.0).
+live_mapping (true), set_initial_pose (false), initial_x / initial_y / initial_yaw (0.0).
 
 Namespace: same as slam.launch.py (PushRosNamespace, relative TF, RewrittenYaml).
 
@@ -23,8 +27,9 @@ import sys
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
 from launch.conditions import IfCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
@@ -96,18 +101,37 @@ def _setup(context, *args, **kwargs):
         },
     }
 
-    # Localization: map_server + amcl. The lifecycle_manager name must match the YAML key.
-    localization_nodes = [
-        nav2_node("nav2_map_server", "map_server", extra={"yaml_filename": map_yaml}),
-        nav2_node("nav2_amcl", "amcl", extra=initial_pose),
-        Node(
-            package="nav2_lifecycle_manager",
-            executable="lifecycle_manager",
-            name="lifecycle_manager_localization",
-            output="screen",
-            parameters=common + [{"autostart": autostart}],
-        ),
-    ]
+    live_mapping = _truthy(context, "live_mapping")
+    if live_mapping:
+        base = os.path.splitext(map_yaml)[0]
+        # slam_toolbox (mapping mode) over the saved pose graph. It applies the namespace on its own.
+        localization_nodes = [
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(os.path.join(pkg, "launch", "slam.launch.py")),
+                launch_arguments={
+                    "robot_namespace": namespace,
+                    "use_sim_time": use_sim_time,
+                    "rviz": "false",
+                    "posegraph": base,
+                    "initial_x": LaunchConfiguration("initial_x"),
+                    "initial_y": LaunchConfiguration("initial_y"),
+                    "initial_yaw": LaunchConfiguration("initial_yaw"),
+                }.items(),
+            )
+        ]
+    else:
+        # Localization: map_server + amcl. The lifecycle_manager name must match the YAML key.
+        localization_nodes = [
+            nav2_node("nav2_map_server", "map_server", extra={"yaml_filename": map_yaml}),
+            nav2_node("nav2_amcl", "amcl", extra=initial_pose),
+            Node(
+                package="nav2_lifecycle_manager",
+                executable="lifecycle_manager",
+                name="lifecycle_manager_localization",
+                output="screen",
+                parameters=common + [{"autostart": autostart}],
+            ),
+        ]
 
     # Navigation: controller and bt_navigator read the odometry (odom_topic).
     navigation_nodes = [
@@ -137,7 +161,10 @@ def _setup(context, *args, **kwargs):
         condition=IfCondition(LaunchConfiguration("rviz")),
     )
 
-    return namespaced(namespace, [*localization_nodes, *navigation_nodes, rviz])
+    # The include (slam) applies the namespace itself: it goes outside the group.
+    includes = [x for x in localization_nodes if isinstance(x, IncludeLaunchDescription)]
+    plain = [x for x in localization_nodes if not isinstance(x, IncludeLaunchDescription)]
+    return includes + namespaced(namespace, [*plain, *navigation_nodes, rviz])
 
 
 def generate_launch_description():
@@ -156,6 +183,12 @@ def generate_launch_description():
             DeclareLaunchArgument("rviz", default_value="true", description="true|false"),
             DeclareLaunchArgument("params_file", default_value=default_params),
             DeclareLaunchArgument("autostart", default_value="true"),
+            DeclareLaunchArgument(
+                "live_mapping",
+                default_value="true",
+                description="true = slam_toolbox keeps mapping while navigating (needs <map>.posegraph/.data); "
+                "false = static map_server + AMCL.",
+            ),
             DeclareLaunchArgument(
                 "odom_topic",
                 default_value="odom",
