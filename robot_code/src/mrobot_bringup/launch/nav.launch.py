@@ -27,7 +27,7 @@ import sys
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription, OpaqueFunction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -105,8 +105,9 @@ def _setup(context, *args, **kwargs):
     if live_mapping:
         base = os.path.splitext(map_yaml)[0]
         # slam_toolbox (mapping mode) over the saved pose graph. It applies the namespace on its own.
+        # GroupAction (scoped): without it the include's rviz:=false leaks and RViz (below) would not open.
         localization_nodes = [
-            IncludeLaunchDescription(
+            GroupAction([IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(os.path.join(pkg, "launch", "slam.launch.py")),
                 launch_arguments={
                     "robot_namespace": namespace,
@@ -117,7 +118,7 @@ def _setup(context, *args, **kwargs):
                     "initial_y": LaunchConfiguration("initial_y"),
                     "initial_yaw": LaunchConfiguration("initial_yaw"),
                 }.items(),
-            )
+            )])
         ]
     else:
         # Localization: map_server + amcl. The lifecycle_manager name must match the YAML key.
@@ -162,8 +163,8 @@ def _setup(context, *args, **kwargs):
     )
 
     # The include (slam) applies the namespace itself: it goes outside the group.
-    includes = [x for x in localization_nodes if isinstance(x, IncludeLaunchDescription)]
-    plain = [x for x in localization_nodes if not isinstance(x, IncludeLaunchDescription)]
+    includes = [x for x in localization_nodes if isinstance(x, GroupAction)]
+    plain = [x for x in localization_nodes if not isinstance(x, GroupAction)]
     return includes + namespaced(namespace, [*plain, *navigation_nodes, rviz])
 
 
