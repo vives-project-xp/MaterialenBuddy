@@ -8,7 +8,7 @@ Diseño del namespace (se aplica UNA sola vez, para evitar /r2/r2/...):
   * Namespace vacío = no se aplica nada (simulación, sin namespace).
   * El Create 3 real vive en /r2 (publica /r2/odom, /r2/tf, /r2/tf_static y escucha /r2/cmd_vel).
 
-Más adelante (pasos 3 y 4) se añaden aquí rewrite_yaml() y la sustitución de marcadores del RViz.
+También incluye rewrite_yaml() y substitute_namespace_markers() para los YAML y los .rviz con namespace.
 """
 
 import os
@@ -63,3 +63,33 @@ def tf_remappings(namespace):
     if not namespace:
         return []
     return [("/tf", "tf"), ("/tf_static", "tf_static")]
+
+
+def rewrite_yaml(yaml_path, namespace):
+    """YAML para nodos bajo `namespace`: RewrittenYaml(root_key=ns). Con '' devuelve el archivo sin cambios.
+
+    Un YAML de parámetros empieza por el nombre del nodo (`slam_toolbox:`). Bajo un namespace, ROS espera
+    `/r2/slam_toolbox`, así que RewrittenYaml envuelve el contenido con la clave del namespace.
+    """
+    if not namespace:
+        return yaml_path
+    from nav2_common.launch import RewrittenYaml
+
+    return RewrittenYaml(
+        source_file=yaml_path, root_key=namespace, param_rewrites={}, convert_types=True
+    )
+
+
+def substitute_namespace_markers(source_file, namespace):
+    """ReplaceString que convierte '/<robot_namespace>' en '/<ns>' ('' si no hay namespace).
+
+    Se usa con los .rviz: los topics se escriben como '/<robot_namespace>/scan' y quedan '/r2/scan'.
+    Siempre devuelve un ReplaceString, también con namespace '' (el marcador pasa a '' y
+    '/<robot_namespace>/scan' queda '/scan', nunca '//scan').
+    """
+    from nav2_common.launch import ReplaceString
+
+    return ReplaceString(
+        source_file=source_file,
+        replacements={"/<robot_namespace>": f"/{namespace}" if namespace else ""},
+    )

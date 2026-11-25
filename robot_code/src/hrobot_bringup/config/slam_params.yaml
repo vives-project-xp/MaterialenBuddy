@@ -1,0 +1,71 @@
+# slam_toolbox online_async (mapeo) para Create 3 + LiDAR LDROBOT LD19.
+# El nodo se llama `slam_toolbox` (se lanza como async_slam_toolbox_node con name='slam_toolbox').
+# Los comentarios explican los parámetros que más se tocan; el resto son valores por defecto razonables.
+slam_toolbox:
+  ros__parameters:
+    # Solver (Ceres): optimiza el grafo de poses. No suele tocarse.
+    solver_plugin: solver_plugins::CeresSolver
+    ceres_linear_solver: SPARSE_NORMAL_CHOLESKY
+    ceres_preconditioner: SCHUR_JACOBI
+    ceres_trust_strategy: LEVENBERG_MARQUARDT
+    ceres_dogleg_type: TRADITIONAL_DOGLEG
+    ceres_loss_function: None
+
+    # ROS: frames y topics
+    odom_frame: odom          # lo publica el Create 3
+    map_frame: map            # lo publica slam_toolbox (map -> odom)
+    base_frame: base_link
+    scan_topic: scan          # relativo: /<ns>/scan (la salida del scan_resampler)
+    mode: mapping             # mapping (no localization): el robot sigue ampliando el mapa
+
+    debug_logging: false
+    throttle_scan: 1          # el LD19 da ~10 Hz; se procesan todos (súbelo si la CPU de la Pi se satura)
+    transform_publish_period: 0.02
+    map_update_interval: 2.0  # s entre actualizaciones del mapa publicado
+    resolution: 0.05          # m por celda
+    # Rango del LD19 según el datasheet: 0.03-12 m. max_laser_range se fija al límite del sensor:
+    # un valor mayor solo añadiría ruido.
+    max_laser_range: 12.0
+    # Ignora retornos del propio robot / carcasa del LD19 (el sensor está sobre la tapa).
+    min_laser_range: 0.10
+    minimum_time_interval: 0.5
+    transform_timeout: 0.2
+    tf_buffer_duration: 30.0
+    stack_size_to_use: 40000000   # bytes; necesario para serializar grafos de poses grandes
+    enable_interactive_mode: false
+
+    # Parámetros generales
+    use_scan_matching: true
+    use_scan_barycenter: true
+    minimum_travel_distance: 0.2    # m entre scans procesados (pequeño para un robot de 0.17 m de radio)
+    minimum_travel_heading: 0.2     # rad (~11 grados)
+    scan_buffer_size: 10
+    scan_buffer_maximum_scan_distance: 10.0
+    link_match_minimum_response_fine: 0.1
+    link_scan_maximum_distance: 1.5
+    loop_search_maximum_distance: 3.0
+    do_loop_closing: true
+    loop_match_minimum_chain_size: 10
+    loop_match_maximum_variance_coarse: 3.0
+    loop_match_minimum_response_coarse: 0.35
+    loop_match_minimum_response_fine: 0.45
+
+    # Correlación
+    correlation_search_space_dimension: 0.5
+    correlation_search_space_resolution: 0.01
+    correlation_search_space_smear_deviation: 0.1
+
+    # Correlación para cierre de bucle
+    loop_search_space_dimension: 8.0
+    loop_search_space_resolution: 0.05
+    loop_search_space_smear_deviation: 0.03
+
+    # Scan matcher
+    distance_variance_penalty: 0.5
+    angle_variance_penalty: 1.0
+    fine_search_angle_offset: 0.00349
+    coarse_search_angle_offset: 0.349
+    coarse_angle_resolution: 0.0349
+    minimum_angle_penalty: 0.9
+    minimum_distance_penalty: 0.5
+    use_response_expansion: true

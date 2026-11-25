@@ -17,16 +17,21 @@ class OdomRelay(Node):
     def __init__(self):
         super().__init__("odom_relay")
 
-        # TODO 1: declara los parámetros input_topic (por defecto "odom") y
-        #         output_topic (por defecto "odom_reliable") con self.declare_parameter(...).
+        self.declare_parameter("input_topic", "odom")
+        self.declare_parameter("output_topic", "odom_reliable")
 
-        # TODO 2: crea el QoS de salida: QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE).
+        output_qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
+        self._pub = self.create_publisher(
+            Odometry, self.get_parameter("output_topic").value, output_qos
+        )
 
-        # TODO 3: crea el publisher de Odometry en el topic output_topic con ese QoS.
-        #         Guárdalo en self._pub. Lee el valor del parámetro con self.get_parameter(...).value.
-
-        # TODO 4: crea la suscripción a input_topic con qos_profile_sensor_data (BEST_EFFORT).
-        #         El callback solo reenvía el mensaje recibido: puede ser self._pub.publish directamente.
+        # El callback solo reenvía el mensaje recibido.
+        self.create_subscription(
+            Odometry,
+            self.get_parameter("input_topic").value,
+            self._pub.publish,
+            qos_profile_sensor_data,
+        )
 
 
 def main():

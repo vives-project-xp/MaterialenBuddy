@@ -42,35 +42,64 @@ def _setup(context, *args, **kwargs):
     laser_scan_dir = LaunchConfiguration("laser_scan_dir")
     laser_yaw = LaunchConfiguration("laser_yaw")
 
-    # TODO 1: ruta al xacro: <share de irobot_create_description>/urdf/create3_ld19.urdf.xacro
-    #         y robot_description = ParameterValue(Command([FindExecutable(name="xacro"), " ", xacro_file,
-    #         " laser_yaw:=", laser_yaw]), value_type=str)
-    xacro_file = ...
-    robot_description = ...
+    xacro_file = os.path.join(get_package_share_directory(
+        "irobot_create_description"), "urdf", "create3_ld19.urdf.xacro")
+    robot_description = ParameterValue(Command([FindExecutable(
+        name="xacro"), " ", xacro_file, " laser_yaw:=", laser_yaw]), value_type=str)
 
-    # TODO 2: Node de robot_state_publisher (name="robot_state_publisher", output="screen") con
-    #         parameters=[{"robot_description": robot_description, "use_sim_time": use_sim_time}]
-    #         y remappings=tf_remappings(namespace).
-    robot_state_publisher = ...
+    # Único nodo que usa TF: el resto no necesita remapearlo.
+    robot_state_publisher = Node(
+        package="robot_state_publisher",
+        executable="robot_state_publisher",
+        name="robot_state_publisher",
+        output="screen",
+        parameters=[{"robot_description": robot_description,
+                     "use_sim_time": use_sim_time}],
+        remappings=tf_remappings(namespace),
+    )
 
-    # TODO 3: Node del driver: package="ldlidar_stl_ros2", executable="ldlidar_stl_ros2_node",
-    #         name="ldlidar_publisher_ld19", output="screen". Parámetros:
-    #           product_name "LDLiDAR_LD19", topic_name "scan_raw", frame_id "laser_frame",
-    #           port_name lidar_port,
-    #           port_baudrate ParameterValue(lidar_baudrate, value_type=int)   (LaunchConfiguration da str)
-    #           laser_scan_dir ParameterValue(laser_scan_dir, value_type=bool)
-    #           enable_angle_crop_func False, angle_crop_min 135.0, angle_crop_max 225.0
-    ldlidar = ...
+    # Driver del LD19: publica LaserScan en `scan_raw` (frame laser_frame, definido en el xacro).
+    # LaunchConfiguration da str, por eso baudrate y scan_dir se convierten con ParameterValue.
+    ldlidar = Node(
+        package="ldlidar_stl_ros2",
+        executable="ldlidar_stl_ros2_node",
+        name="ldlidar_publisher_ld19",
+        output="screen",
+        parameters=[
+            {
+                "product_name": "LDLiDAR_LD19",
+                "topic_name": "scan_raw",
+                "frame_id": "laser_frame",
+                "port_name": lidar_port,
+                "port_baudrate": ParameterValue(lidar_baudrate, value_type=int),
+                "laser_scan_dir": ParameterValue(laser_scan_dir, value_type=bool),
+                "enable_angle_crop_func": False,
+                "angle_crop_min": 135.0,
+                "angle_crop_max": 225.0,
+            }
+        ],
+    )
 
-    # TODO 4: Node de scan_resampler: package="hrobot_bringup", executable="scan_resampler.py",
-    #         name="scan_resampler", output="screen",
-    #         parameters=[{"input_topic": "scan_raw", "output_topic": "scan", "num_beams": <tu decisión>}]
-    scan_resampler = ...
+    # scan_raw (500-504 rayos variables) -> scan (num_beams fijo), que es lo que exige slam_toolbox.
+    scan_resampler = Node(
+        package="hrobot_bringup",
+        executable="scan_resampler.py",
+        name="scan_resampler",
+        output="screen",
+        parameters=[{"input_topic": "scan_raw",
+                     "output_topic": "scan", "num_beams": 500}],
+    )
 
-    # TODO 5 (cuando termines odom_relay.py): añade aquí su Node (executable="odom_relay.py") y
-    #         agrégalo a la lista. Hoy el odom_relay solo hace falta para Nav2 (paso 4).
+    # odom (BEST_EFFORT, del Create 3) -> odom_reliable (RELIABLE). Solo lo consume Nav2 (paso 4).
+    odom_relay = Node(
+        package="hrobot_bringup",
+        executable="odom_relay.py",
+        name="odom_relay",
+        output="screen",
+        parameters=[{"input_topic": "odom", "output_topic": "odom_reliable"}],
+    )
 
-    return namespaced(namespace, [robot_state_publisher, ldlidar, scan_resampler])
+    return namespaced(namespace, [robot_state_publisher, ldlidar, scan_resampler, odom_relay])
 
 
 def generate_launch_description():

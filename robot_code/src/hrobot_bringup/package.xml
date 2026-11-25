@@ -24,7 +24,14 @@
   -->
   <exec_depend>ldlidar_stl_ros2</exec_depend>
 
-  <!-- Las dependencias de slam_toolbox y Nav2 se añaden en los pasos 3 y 4. -->
+  <!-- Paso 3: mapeo -->
+  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>nav2_common</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>lifecycle_msgs</exec_depend>
+  <exec_depend>teleop_twist_keyboard</exec_depend>
+
+  <!-- Las dependencias de Nav2 se añaden en el paso 4. -->
 
   <export>
     <build_type>ament_cmake</build_type>
