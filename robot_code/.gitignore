@@ -1,6 +1,8 @@
-# Solo se versiona src/ (y este .gitignore); todo lo demás queda local
+# Solo se versiona src/, scripts/, maps/ (carpeta) y este .gitignore; todo lo demás queda local
 /*
 !/src/
+!/scripts/
+!/maps/
 !/.gitignore
 
 # colcon / ROS 2
