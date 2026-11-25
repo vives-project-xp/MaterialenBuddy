@@ -1,16 +1,16 @@
-"""slam_toolbox (online async, mapeo) + RViz. Sin hardware: solo lo que hace el SLAM.
+"""slam_toolbox (online async, mapping) + RViz. No hardware: only what the SLAM does.
 
-Lo incluye `mapping.launch.py` (robot real) y, más adelante, la simulación.
+Included by `mapping.launch.py` (real robot) and by the simulation.
 
-Argumentos: robot_namespace (env CREATE3_ROBOT_NAMESPACE o 'r2'; vacío = ninguno), use_sim_time (false),
+Arguments: robot_namespace (env CREATE3_ROBOT_NAMESPACE or 'r2'; empty = none), use_sim_time (false),
 rviz (true).
 
-Namespace: PushRosNamespace (GroupAction) alrededor de slam_toolbox y rviz2, que son los nodos creados aquí.
-TF se remapea a <ns>/tf y <ns>/tf_static y el YAML se reescribe con RewrittenYaml(root_key=<ns>);
-con namespace vacío no se empuja ni se reescribe nada.
+Namespace: PushRosNamespace (GroupAction) around slam_toolbox and rviz2, which are the nodes created here.
+TF is remapped to <ns>/tf and <ns>/tf_static and the YAML is rewritten with RewrittenYaml(root_key=<ns>);
+with an empty namespace nothing is pushed or rewritten.
 
-slam_toolbox en ROS 2 Jazzy es un LifecycleNode: arranca en estado "unconfigured" y hay que
-configurarlo y activarlo (como en su propio online_async_launch.py).
+slam_toolbox in ROS 2 Jazzy is a LifecycleNode: it starts in the "unconfigured" state and has to be
+configured and activated (as in its own online_async_launch.py).
 """
 
 import os
@@ -34,7 +34,7 @@ from launch_ros.events.lifecycle import ChangeState
 from lifecycle_msgs.msg import Transition
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
-from hrobot_namespace import (  # noqa: E402
+from mrobot_namespace import (  # noqa: E402
     namespaced,
     resolve_namespace,
     rewrite_yaml,
@@ -47,21 +47,21 @@ from hrobot_namespace import (  # noqa: E402
 def _setup(context, *args, **kwargs):
     namespace = resolve_namespace(context)
     use_sim_time = LaunchConfiguration("use_sim_time")
-    pkg = get_package_share_directory("hrobot_bringup")
+    pkg = get_package_share_directory("mrobot_bringup")
 
     slam_yaml = rewrite_yaml(os.path.join(
         pkg, "config", "slam_params.yaml"), namespace)
 
     tf_remaps = tf_remappings(namespace)
 
-    # slam_toolbox publica /map y /map_metadata con nombre ABSOLUTO, así que PushRosNamespace
-    # no los mueve bajo /r2: hay que remapearlos a mano (solo si hay namespace).
+    # slam_toolbox publishes /map and /map_metadata with an ABSOLUTE name, so PushRosNamespace
+    # does not move them under /r2: they have to be remapped by hand (only when there is a namespace).
     slam_remaps = list(tf_remaps)
     if namespace:
         slam_remaps += [("/map", f"/{namespace}/map"),
                         ("/map_metadata", f"/{namespace}/map_metadata")]
 
-    # namespace="" porque el namespace lo pone PushRosNamespace (LifecycleNode exige un str).
+    # namespace="" because the namespace comes from PushRosNamespace (LifecycleNode requires a str).
     slam_node = LifecycleNode(
         package="slam_toolbox",
         executable="async_slam_toolbox_node",
@@ -72,7 +72,7 @@ def _setup(context, *args, **kwargs):
         remappings=slam_remaps,
     )
 
-    # Paso 1 del ciclo de vida: unconfigured -> inactive.
+    # Lifecycle step 1: unconfigured -> inactive.
     configure_slam = EmitEvent(
         event=ChangeState(
             lifecycle_node_matcher=matches_action(slam_node),
@@ -80,14 +80,14 @@ def _setup(context, *args, **kwargs):
         )
     )
 
-    # Paso 2: cuando termina de configurarse (configuring -> inactive), lo activa (inactive -> active).
+    # Step 2: once it finishes configuring (configuring -> inactive), activate it (inactive -> active).
     activate_slam = RegisterEventHandler(
         OnStateTransition(
             target_lifecycle_node=slam_node,
             start_state="configuring",
             goal_state="inactive",
             entities=[
-                LogInfo(msg="slam_toolbox configurado, activando..."),
+                LogInfo(msg="slam_toolbox configured, activating..."),
                 EmitEvent(
                     event=ChangeState(
                         lifecycle_node_matcher=matches_action(slam_node),
@@ -98,7 +98,7 @@ def _setup(context, *args, **kwargs):
         )
     )
 
-    # RViz: '/<robot_namespace>' en el .rviz se sustituye por '/<ns>' (o '' sin namespace).
+    # RViz: '/<robot_namespace>' in the .rviz is replaced by '/<ns>' (or '' without a namespace).
     rviz = Node(
         package="rviz2",
         executable="rviz2",

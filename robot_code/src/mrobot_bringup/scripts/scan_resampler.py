@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Remuestrea sensor_msgs/LaserScan a un número FIJO de rayos.
+"""Resample sensor_msgs/LaserScan to a FIXED number of beams.
 
-El LD19 real entrega entre ~500 y 504 lecturas por vuelta (varía). slam_toolbox (Karto) fija el tamaño con
-el primer scan y avisa "LaserRangeScan contains N range readings, expected M" con cualquier otro.
-Este nodo lee `scan_raw` (driver) y publica `scan` con SIEMPRE `num_beams` rayos y los mismos ángulos.
-Usa el vecino más cercano (no interpola, para no inventar distancias en los bordes de los obstáculos).
-Solo robot real: el sensor simulado de Gazebo ya entrega un número fijo de rayos.
+The real LD19 delivers between ~500 and 504 readings per revolution (it varies). slam_toolbox (Karto) fixes the
+size with the first scan and warns "LaserRangeScan contains N range readings, expected M" for any other.
+This node reads `scan_raw` (driver) and publishes `scan` with ALWAYS `num_beams` beams and the same angles.
+It uses the nearest neighbour (no interpolation, so it does not invent distances at obstacle edges).
+Real robot only: the simulated Gazebo sensor already delivers a fixed number of beams.
 """
 
 import math
@@ -19,30 +19,30 @@ TWO_PI = 2.0 * math.pi
 
 
 def resample_arrays(ranges, intensities, angle_min, angle_increment, num_beams):
-    """Devuelve (ranges, intensities) con `num_beams` rayos repartidos en 0..2*pi.
+    """Return (ranges, intensities) with `num_beams` beams spread over 0..2*pi.
 
-    El rayo de salida k apunta al ángulo k * (2*pi / num_beams). Para cada uno se toma la lectura de
-    ENTRADA más cercana a ese ángulo. Si el scan de entrada no cubre una vuelta completa, los rayos fuera
-    de su rango quedan en inf (sin lectura).
-    `intensities` puede ser None o tener otro largo que `ranges`: en ese caso la salida va sin
-    intensidades (se devuelve None en su lugar).
-    Python puro: ~500 rayos a 10 Hz no justifican depender de numpy.
+    Output beam k points at angle k * (2*pi / num_beams). For each one, the INPUT reading nearest to that
+    angle is taken. If the input scan does not cover a full revolution, the beams outside its range are
+    left at inf (no reading).
+    `intensities` can be None or have a different length than `ranges`: in that case the output has no
+    intensities (None is returned in their place).
+    Pure Python: ~500 beams at 10 Hz do not justify depending on numpy.
     """
     n_in = len(ranges)
     out_inc = TWO_PI / num_beams
-    # La entrada cubre la vuelta si sus rayos suman 2*pi (con tolerancia de un rayo y medio).
+    # The input covers the full revolution if its beams add up to 2*pi (with a tolerance of one and a half beams).
     full_circle = n_in * angle_increment >= TWO_PI - 1.5 * angle_increment
     use_intensities = intensities is not None and len(intensities) == n_in
 
     ranges_out = []
     intensities_out = [] if use_intensities else None
     for k in range(num_beams):
-        # Ángulo del rayo k respecto al inicio del scan de entrada, en [0, 2*pi).
+        # Angle of beam k relative to the start of the input scan, in [0, 2*pi).
         phi = (k * out_inc - angle_min) % TWO_PI
         i = int(round(phi / angle_increment))
         if i >= n_in:
             if full_circle:
-                i -= n_in  # se cierra el círculo
+                i -= n_in  # the circle closes
             else:
                 ranges_out.append(math.inf)
                 if use_intensities:
@@ -60,18 +60,18 @@ class ScanResampler(Node):
 
         self.declare_parameter("input_topic", "scan_raw")
         self.declare_parameter("output_topic", "scan")
-        # 500 = resolución nominal del LD19 y lo que genera el sensor de Gazebo (real y simulación coinciden).
+        # 500 = nominal LD19 resolution and what the Gazebo sensor generates (real robot and simulation match).
         self.declare_parameter("num_beams", 500)
         self._n = int(self.get_parameter("num_beams").value)
         if self._n < 2:
             raise ValueError("num_beams debe ser >= 2")
 
-        # RELIABLE empareja con suscriptores RELIABLE (Nav2) y BEST_EFFORT (slam_toolbox, RViz).
+        # RELIABLE matches RELIABLE subscribers (Nav2) and BEST_EFFORT ones (slam_toolbox, RViz).
         output_qos = QoSProfile(depth=5, reliability=ReliabilityPolicy.RELIABLE)
         self._pub = self.create_publisher(
             LaserScan, self.get_parameter("output_topic").value, output_qos
         )
-        # Sensor-data (BEST_EFFORT) empareja con un driver RELIABLE o BEST_EFFORT.
+        # Sensor-data (BEST_EFFORT) matches a RELIABLE or BEST_EFFORT driver.
         self.create_subscription(
             LaserScan,
             self.get_parameter("input_topic").value,

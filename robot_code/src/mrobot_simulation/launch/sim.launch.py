@@ -1,21 +1,21 @@
-"""Gazebo (Harmonic) + Create 3 / LD19 simulado + slam_toolbox o Nav2 + RViz.
+"""Gazebo (Harmonic) + simulated Create 3 / LD19 + slam_toolbox or Nav2 + RViz.
 
-Argumentos: world (room.sdf), headless (false), rviz (true), x / y / yaw (pose de spawn),
+Arguments: world (room.sdf), headless (false), rviz (true), x / y / yaw (spawn pose),
 nav (false), map_yaml.
 
-nav:=false (por defecto): slam_toolbox para mapear con teleoperación.
-nav:=true: navegación autónoma sobre un mapa guardado (map_server + AMCL + Nav2) en vez de slam_toolbox;
-requiere map_yaml:=<ruta absoluta al .yaml>. AMCL arranca en la pose de spawn (x/y/yaw), que coincide con
-el origen del mapa si éste se creó lanzando la simulación sin mover x/y/yaw.
+nav:=false (default): slam_toolbox to map with teleoperation.
+nav:=true: autonomous navigation on a saved map (map_server + AMCL + Nav2) instead of slam_toolbox;
+requires map_yaml:=<absolute path to the .yaml>. AMCL starts at the spawn pose (x/y/yaw), which matches
+the map origin if the map was created by launching the simulation without moving x/y/yaw.
 
-La simulación corre SIN namespace (/cmd_vel, /scan, /odom, /map, /tf): igual que el robot real con
-`robot_namespace:=''`. Para mover el robot con el teclado:
+The simulation runs WITHOUT a namespace (/cmd_vel, /scan, /odom, /map, /tf): same as the real robot with
+`robot_namespace:=''`. To move the robot with the keyboard:
     ros2 run teleop_twist_keyboard teleop_twist_keyboard
-Todos los nodos ROS usan use_sim_time:=true (reloj de Gazebo vía /clock).
+All ROS nodes use use_sim_time:=true (Gazebo clock via /clock).
 
-Cómo se mueve el robot simulado: el URDF oficial carga el plugin gz_ros2_control, que ejecuta un
-controller_manager. Hay que arrancar dos controladores (joint_state_broadcaster y diffdrive_controller);
-el segundo publica /odom y el TF odom -> base_link. Por eso aquí no hay puente de cmd_vel/odom/tf.
+How the simulated robot moves: the official URDF loads the gz_ros2_control plugin, which runs a
+controller_manager. Two controllers have to be started (joint_state_broadcaster and diffdrive_controller);
+the second one publishes /odom and the odom -> base_link TF. That is why there is no cmd_vel/odom/tf bridge here.
 """
 
 import os
@@ -37,8 +37,8 @@ from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
-    sim_share = get_package_share_directory("hrobot_simulation")
-    bringup_share = get_package_share_directory("hrobot_bringup")
+    sim_share = get_package_share_directory("mrobot_simulation")
+    bringup_share = get_package_share_directory("mrobot_bringup")
     description_share = get_package_share_directory(
         "irobot_create_description")
     ros_gz_sim_share = get_package_share_directory("ros_gz_sim")
@@ -46,22 +46,22 @@ def generate_launch_description():
     world = LaunchConfiguration("world")
     headless = LaunchConfiguration("headless")
 
-    # Para que Gazebo resuelva las mallas package://irobot_create_description/meshes/...
-    # Gazebo busca la carpeta irobot_create_description dentro de esa ruta: el directorio PADRE.
+    # So Gazebo can resolve the package://irobot_create_description/meshes/... meshes.
+    # Gazebo looks for the irobot_create_description folder inside that path: the PARENT directory.
     gz_resource_path = SetEnvironmentVariable(
         "GZ_SIM_RESOURCE_PATH",
         [os.path.dirname(description_share), ":",
          os.environ.get("GZ_SIM_RESOURCE_PATH", "")],
     )
 
-    # `gazebo:=ignition` activa los plugins de Gazebo Harmonic: ros2_control, sensores y el LiDAR simulado del LD19.
+    # `gazebo:=ignition` enables the Gazebo Harmonic plugins: ros2_control, sensors and the simulated LD19 LiDAR.
     robot_description = ParameterValue(
         Command([FindExecutable(name="xacro"), " ", os.path.join(description_share,
                 "urdf", "create3_ld19.urdf.xacro"), " gazebo:=ignition laser_yaw:=0"]),
         value_type=str,
     )
 
-    # Gazebo: servidor + GUI (-r: arranca ejecutando). headless: solo servidor (-s), sin GUI.
+    # Gazebo: server + GUI (-r: start running). headless: server only (-s), no GUI.
     gz_sim_launch = os.path.join(
         ros_gz_sim_share, "launch", "gz_sim.launch.py")
     gz_gui = IncludeLaunchDescription(
@@ -84,7 +84,7 @@ def generate_launch_description():
             {"robot_description": robot_description, "use_sim_time": True}],
     )
 
-    # Mete el robot en Gazebo leyendo el topic robot_description (z=0.01 evita que nazca incrustado en el suelo).
+    # Spawns the robot in Gazebo from the robot_description topic (z=0.01 keeps it from spawning embedded in the floor).
     spawn = Node(
         package="ros_gz_sim",
         executable="create",
@@ -105,7 +105,7 @@ def generate_launch_description():
         ],
     )
 
-    # Puente ROS <-> Gazebo (solo /clock y /scan, ver config/gz_bridge.yaml)
+    # ROS <-> Gazebo bridge (only /clock and /scan, see config/gz_bridge.yaml)
     bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
@@ -118,8 +118,8 @@ def generate_launch_description():
         ],
     )
 
-    # Controladores de ros2_control. El controller_manager no existe hasta que el robot aparece en Gazebo;
-    # el timeout de 60 s hace que el spawner espere. diffdrive_controller arranca DESPUÉS del broadcaster.
+    # ros2_control controllers. The controller_manager does not exist until the robot appears in Gazebo;
+    # the 60 s timeout makes the spawner wait. diffdrive_controller starts AFTER the broadcaster.
     joint_state_broadcaster_spawner = Node(
         package="controller_manager",
         executable="spawner",
@@ -142,18 +142,18 @@ def generate_launch_description():
         )
     )
 
-    # Conversor Twist (teleop, Nav2) -> TwistStamped (diff_drive_controller de Jazzy).
+    # Twist (teleop, Nav2) -> TwistStamped converter (Jazzy diff_drive_controller).
     cmd_vel_stamper = Node(
-        package="hrobot_simulation",
+        package="mrobot_simulation",
         executable="cmd_vel_stamper.py",
         output="screen",
         parameters=[{"use_sim_time": True}],
     )
 
-    # Los dos modos de trabajo, ambos sin namespace y con tiempo de simulación:
-    #   * slam: mapear con teleop (nav:=false).
-    #   * nav_launch: navegar sobre un mapa guardado (nav:=true). AMCL arranca en la pose de spawn.
-    #     No hace falta odom_topic: en simulación Nav2 lee "odom" (valor por defecto).
+    # The two working modes, both without a namespace and with simulation time:
+    #   * slam: map with teleop (nav:=false).
+    #   * nav_launch: navigate on a saved map (nav:=true). AMCL starts at the spawn pose.
+    #     odom_topic is not needed: in simulation Nav2 reads "odom" (the default value).
     slam = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(
             bringup_share, "launch", "slam.launch.py")),
@@ -186,23 +186,23 @@ def generate_launch_description():
                 "world",
                 default_value=PathJoinSubstitution(
                     [sim_share, "worlds", "room.sdf"]),
-                description="Ruta al mundo de Gazebo (.sdf).",
+                description="Path to the Gazebo world (.sdf).",
             ),
             DeclareLaunchArgument(
-                "headless", default_value="false", description="true = Gazebo sin GUI."),
+                "headless", default_value="false", description="true = Gazebo without GUI."),
             DeclareLaunchArgument(
                 "rviz", default_value="true", description="true|false"),
             DeclareLaunchArgument(
-                "nav", default_value="false", description="true = AMCL + Nav2 en vez de slam_toolbox."
+                "nav", default_value="false", description="true = AMCL + Nav2 instead of slam_toolbox."
             ),
             DeclareLaunchArgument(
-                "map_yaml", default_value="", description="Con nav:=true: ruta absoluta al .yaml del mapa."
+                "map_yaml", default_value="", description="With nav:=true: absolute path to the map .yaml."
             ),
             DeclareLaunchArgument("x", default_value="0.0"),
             DeclareLaunchArgument("y", default_value="0.0"),
             DeclareLaunchArgument("yaw", default_value="0.0"),
             gz_resource_path,
-            slam,  # primero: nav.launch.py valida map_yaml antes de arrancar procesos
+            slam,  # first: nav.launch.py validates map_yaml before any process starts
             nav_launch,
             gz_gui,
             gz_headless,

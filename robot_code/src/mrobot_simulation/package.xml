@@ -1,20 +1,20 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>hrobot_simulation</name>
+  <name>mrobot_simulation</name>
   <version>0.1.0</version>
-  <description>Simulación en Gazebo (Harmonic) del Create 3 + LD19: mundo, puente ros_gz y launch.</description>
-  <maintainer email="tu_correo@ejemplo.com">Brandon</maintainer>
+  <description>Gazebo (Harmonic) simulation of the Create 3 + LD19: world, ros_gz bridge and launch.</description>
+  <maintainer email="your_email@example.com">Brandon</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <exec_depend>irobot_create_description</exec_depend>
   <exec_depend>irobot_create_control</exec_depend>
-  <exec_depend>hrobot_bringup</exec_depend>
+  <exec_depend>mrobot_bringup</exec_depend>
   <exec_depend>ros_gz_sim</exec_depend>
   <exec_depend>ros_gz_bridge</exec_depend>
-  <!-- Plugin de ros2_control dentro de Gazebo (lo carga el URDF oficial) y los controladores que usa -->
+  <!-- ros2_control plugin inside Gazebo (loaded by the official URDF) and the controllers it uses -->
   <exec_depend>gz_ros2_control</exec_depend>
   <exec_depend>controller_manager</exec_depend>
   <exec_depend>joint_state_broadcaster</exec_depend>

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<!-- Sala de 8x8 m con un tabique con puerta y varios obstaculos, para probar SLAM + teleop.
-     Robot en el origen. gz-sim (Harmonic). El sistema Sensors (ogre2) es necesario para el gpu_lidar. -->
+<!-- 8x8 m room with a divider wall with a doorway and several obstacles, to test SLAM + teleop.
+     Robot at the origin. gz-sim (Harmonic). The Sensors system (ogre2) is required for the gpu_lidar. -->
 <sdf version="1.9">
   <world name="room">
     <physics name="1ms" type="ignored">

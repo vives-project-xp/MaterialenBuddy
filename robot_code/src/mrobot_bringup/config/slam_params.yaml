@@ -1,9 +1,9 @@
-# slam_toolbox online_async (mapeo) para Create 3 + LiDAR LDROBOT LD19.
-# El nodo se llama `slam_toolbox` (se lanza como async_slam_toolbox_node con name='slam_toolbox').
-# Los comentarios explican los parámetros que más se tocan; el resto son valores por defecto razonables.
+# slam_toolbox online_async (mapping) for the Create 3 + LDROBOT LD19 LiDAR.
+# The node is called `slam_toolbox` (launched as async_slam_toolbox_node with name='slam_toolbox').
+# The comments explain the parameters that are tweaked most often; the rest are reasonable defaults.
 slam_toolbox:
   ros__parameters:
-    # Solver (Ceres): optimiza el grafo de poses. No suele tocarse.
+    # Solver (Ceres): optimizes the pose graph. It is rarely touched.
     solver_plugin: solver_plugins::CeresSolver
     ceres_linear_solver: SPARSE_NORMAL_CHOLESKY
     ceres_preconditioner: SCHUR_JACOBI
@@ -11,34 +11,34 @@ slam_toolbox:
     ceres_dogleg_type: TRADITIONAL_DOGLEG
     ceres_loss_function: None
 
-    # ROS: frames y topics
-    odom_frame: odom          # lo publica el Create 3
-    map_frame: map            # lo publica slam_toolbox (map -> odom)
+    # ROS: frames and topics
+    odom_frame: odom          # published by the Create 3
+    map_frame: map            # published by slam_toolbox (map -> odom)
     base_frame: base_link
-    scan_topic: scan          # relativo: /<ns>/scan (la salida del scan_resampler)
-    mode: mapping             # mapping (no localization): el robot sigue ampliando el mapa
+    scan_topic: scan          # relative: /<ns>/scan (the scan_resampler output)
+    mode: mapping             # mapping (not localization): the robot keeps extending the map
 
     debug_logging: false
-    throttle_scan: 1          # el LD19 da ~10 Hz; se procesan todos (súbelo si la CPU de la Pi se satura)
+    throttle_scan: 1          # the LD19 gives ~10 Hz; every scan is processed (raise it if the Pi CPU saturates)
     transform_publish_period: 0.02
-    map_update_interval: 2.0  # s entre actualizaciones del mapa publicado
-    resolution: 0.05          # m por celda
-    # Rango del LD19 según el datasheet: 0.03-12 m. max_laser_range se fija al límite del sensor:
-    # un valor mayor solo añadiría ruido.
+    map_update_interval: 2.0  # s between updates of the published map
+    resolution: 0.05          # m per cell
+    # LD19 range according to the datasheet: 0.03-12 m. max_laser_range is set to the sensor limit:
+    # a larger value would only add noise.
     max_laser_range: 12.0
-    # Ignora retornos del propio robot / carcasa del LD19 (el sensor está sobre la tapa).
+    # Ignore returns from the robot itself / the LD19 housing (the sensor sits on top of the lid).
     min_laser_range: 0.10
     minimum_time_interval: 0.5
     transform_timeout: 0.2
     tf_buffer_duration: 30.0
-    stack_size_to_use: 40000000   # bytes; necesario para serializar grafos de poses grandes
+    stack_size_to_use: 40000000   # bytes; needed to serialize large pose graphs
     enable_interactive_mode: false
 
-    # Parámetros generales
+    # General parameters
     use_scan_matching: true
     use_scan_barycenter: true
-    minimum_travel_distance: 0.2    # m entre scans procesados (pequeño para un robot de 0.17 m de radio)
-    minimum_travel_heading: 0.2     # rad (~11 grados)
+    minimum_travel_distance: 0.2    # m between processed scans (small for a robot with a 0.17 m radius)
+    minimum_travel_heading: 0.2     # rad (~11 degrees)
     scan_buffer_size: 10
     scan_buffer_maximum_scan_distance: 10.0
     link_match_minimum_response_fine: 0.1
@@ -50,12 +50,12 @@ slam_toolbox:
     loop_match_minimum_response_coarse: 0.35
     loop_match_minimum_response_fine: 0.45
 
-    # Correlación
+    # Correlation
     correlation_search_space_dimension: 0.5
     correlation_search_space_resolution: 0.01
     correlation_search_space_smear_deviation: 0.1
 
-    # Correlación para cierre de bucle
+    # Correlation for loop closure
     loop_search_space_dimension: 8.0
     loop_search_space_resolution: 0.05
     loop_search_space_smear_deviation: 0.03

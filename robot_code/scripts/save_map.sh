@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
-# Guarda el mapa que slam_toolbox está construyendo (mapping.launch.py debe estar corriendo).
+# Saves the map that slam_toolbox is building (mapping.launch.py must be running).
 #
-# Genera en <maps_dir> los dos formatos que usa el flujo mapear -> navegar:
-#   <nombre>.posegraph + <nombre>.data   grafo de poses de slam_toolbox (para retomar el mapeo)
-#   <nombre>.yaml + <nombre>.pgm         imagen del mapa (para NAVEGAR con Nav2, paso 4)
+# It generates in <maps_dir> the two formats used by the map -> navigate flow:
+#   <name>.posegraph + <name>.data   slam_toolbox pose graph (to resume mapping)
+#   <name>.yaml + <name>.pgm         map image (to NAVIGATE with Nav2)
 #
-# Uso:  scripts/save_map.sh <nombre> [--maps-dir DIR] [--namespace NS] [--force]
-#                                    [--pull USUARIO@HOST] [--remote-ws DIR]
-#   <nombre>       solo letras, dígitos, '_' y '-' (sin ruta ni extensión)
-#   --maps-dir     carpeta de salida en ESTA máquina (def: <robot_code>/maps)
-#   --namespace    namespace del robot (def: $CREATE3_ROBOT_NAMESPACE si existe, si no r2; vacío = ninguno)
-#   --force        sobrescribe un mapa existente con ese nombre
-#   --pull         slam_toolbox corre en OTRA máquina (la Pi): los archivos se guardan allí, en
-#                  <remote-ws>/maps, y luego se copian con scp a --maps-dir. Necesita ssh a ese host.
-#   --remote-ws    carpeta robot_code en la otra máquina (def: ~/MaterialenBuddy/robot_code); solo con --pull
+# Usage:  scripts/save_map.sh <name> [--maps-dir DIR] [--namespace NS] [--force]
+#                                    [--pull USER@HOST] [--remote-ws DIR]
+#   <name>         letters, digits, '_' and '-' only (no path or extension)
+#   --maps-dir     output folder on THIS machine (default: <robot_code>/maps)
+#   --namespace    robot namespace (default: $CREATE3_ROBOT_NAMESPACE if set, otherwise r2; empty = none)
+#   --force        overwrite an existing map with that name
+#   --pull         slam_toolbox runs on ANOTHER machine (the Pi): the files are saved there, in
+#                  <remote-ws>/maps, and then copied with scp to --maps-dir. Needs ssh to that host.
+#   --remote-ws    robot_code folder on the other machine (default: ~/MaterialenBuddy/robot_code); only with --pull
 #
-# slam_toolbox escribe los archivos en la máquina donde corre. Sin --pull, ejecuta este script en esa misma
-# máquina; los servicios responden por red desde otra, pero los archivos acabarían en el disco remoto.
+# slam_toolbox writes the files on the machine where it runs. Without --pull, run this script on that same
+# machine; the services answer over the network from another one, but the files would end up on the remote disk.
 
 set -euo pipefail
 
@@ -35,100 +35,100 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 while [ $# -gt 0 ]; do
   arg="$1"; shift
   case "$arg" in
-    --maps-dir) [ $# -gt 0 ] || die "--maps-dir necesita un valor"; MAPS_DIR="$1"; shift ;;
-    --namespace) [ $# -gt 0 ] || die "--namespace necesita un valor (usa '' para ninguno)"; NAMESPACE="$1"; shift ;;
-    --pull) [ $# -gt 0 ] || die "--pull necesita usuario@host"; PULL="$1"; shift ;;
-    --remote-ws) [ $# -gt 0 ] || die "--remote-ws necesita un valor"; REMOTE_WS="$1"; shift ;;
+    --maps-dir) [ $# -gt 0 ] || die "--maps-dir needs a value"; MAPS_DIR="$1"; shift ;;
+    --namespace) [ $# -gt 0 ] || die "--namespace needs a value (use '' for none)"; NAMESPACE="$1"; shift ;;
+    --pull) [ $# -gt 0 ] || die "--pull needs user@host"; PULL="$1"; shift ;;
+    --remote-ws) [ $# -gt 0 ] || die "--remote-ws needs a value"; REMOTE_WS="$1"; shift ;;
     --force) FORCE=1 ;;
     -h|--help) sed -n '2,20p' "${BASH_SOURCE[0]}"; exit 0 ;;
-    -*) die "opción desconocida: ${arg}" ;;
-    *) [ -z "${NAME}" ] || die "solo se admite un nombre de mapa"; NAME="${arg}" ;;
+    -*) die "unknown option: ${arg}" ;;
+    *) [ -z "${NAME}" ] || die "only one map name is accepted"; NAME="${arg}" ;;
   esac
 done
 
-[ -n "${NAME}" ] || die "falta el nombre del mapa. Uso: save_map.sh <nombre> [--maps-dir DIR] [--namespace NS] [--force] [--pull usuario@host]"
-[[ "${NAME}" =~ ^[A-Za-z0-9_-]+$ ]] || die "nombre inválido '${NAME}': usa solo letras, dígitos, '_' y '-'"
+[ -n "${NAME}" ] || die "missing map name. Usage: save_map.sh <name> [--maps-dir DIR] [--namespace NS] [--force] [--pull user@host]"
+[[ "${NAME}" =~ ^[A-Za-z0-9_-]+$ ]] || die "invalid name '${NAME}': use only letters, digits, '_' and '-'"
 
 NAMESPACE="${NAMESPACE#/}"; NAMESPACE="${NAMESPACE%/}"
 PREFIX=""
 [ -z "${NAMESPACE}" ] || PREFIX="/${NAMESPACE}"
 
-command -v ros2 >/dev/null || die "ros2 no está en el PATH: haz source de /opt/ros/jazzy/setup.bash y del workspace"
+command -v ros2 >/dev/null || die "ros2 is not in the PATH: source /opt/ros/jazzy/setup.bash and the workspace"
 
 mkdir -p "${MAPS_DIR}"
-MAPS_DIR="$(cd "${MAPS_DIR}" && pwd)"   # ruta absoluta
+MAPS_DIR="$(cd "${MAPS_DIR}" && pwd)"   # absolute path
 LOCAL_BASE="${MAPS_DIR}/${NAME}"
 
 if [ "${FORCE}" -eq 0 ]; then
   for ext in "${EXTS[@]}"; do
-    [ ! -e "${LOCAL_BASE}.${ext}" ] || die "${LOCAL_BASE}.${ext} ya existe (usa --force para sobrescribir)"
+    [ ! -e "${LOCAL_BASE}.${ext}" ] || die "${LOCAL_BASE}.${ext} already exists (use --force to overwrite)"
   done
 fi
 
-# BASE = ruta (sin extensión) que recibe slam_toolbox: debe existir en la máquina donde corre.
+# BASE = path (without extension) given to slam_toolbox: it must exist on the machine where it runs.
 if [ -n "${PULL}" ]; then
-  command -v ssh >/dev/null && command -v scp >/dev/null || die "--pull necesita ssh y scp"
-  # slam_toolbox no expande '~': se resuelve a ruta absoluta en la otra máquina.
+  command -v ssh >/dev/null && command -v scp >/dev/null || die "--pull needs ssh and scp"
+  # slam_toolbox does not expand '~': it is resolved to an absolute path on the other machine.
   REMOTE_WS_ABS="$(ssh "${PULL}" "cd ${REMOTE_WS} && pwd")" \
-    || die "no pude entrar en '${REMOTE_WS}' en ${PULL} (¿--remote-ws correcto? ¿ssh funciona?)"
+    || die "could not enter '${REMOTE_WS}' on ${PULL} (is --remote-ws correct? does ssh work?)"
   REMOTE_MAPS="${REMOTE_WS_ABS}/maps"
-  ssh "${PULL}" "mkdir -p '${REMOTE_MAPS}'" || die "no pude crear ${REMOTE_MAPS} en ${PULL}"
+  ssh "${PULL}" "mkdir -p '${REMOTE_MAPS}'" || die "could not create ${REMOTE_MAPS} on ${PULL}"
   if [ "${FORCE}" -eq 0 ]; then
     for ext in "${EXTS[@]}"; do
       ssh "${PULL}" "[ ! -e '${REMOTE_MAPS}/${NAME}.${ext}' ]" \
-        || die "${PULL}:${REMOTE_MAPS}/${NAME}.${ext} ya existe (usa --force para sobrescribir)"
+        || die "${PULL}:${REMOTE_MAPS}/${NAME}.${ext} already exists (use --force to overwrite)"
     done
   fi
   BASE="${REMOTE_MAPS}/${NAME}"
 else
   BASE="${LOCAL_BASE}"
   if ! pgrep -f async_slam_toolbox_node >/dev/null 2>&1; then
-    echo "AVISO: no hay un slam_toolbox corriendo en esta máquina. Si corre en la Pi, los archivos se" >&2
-    echo "       guardarían allí: usa --pull usuario@host (o ejecuta este script en la Pi)." >&2
+    echo "WARNING: no slam_toolbox is running on this machine. If it runs on the Pi, the files would be" >&2
+    echo "         saved there: use --pull user@host (or run this script on the Pi)." >&2
   fi
 fi
 
 SER="${PREFIX}/slam_toolbox/serialize_map"
 SAVE="${PREFIX}/slam_toolbox/save_map"
 timeout 10 ros2 service list 2>/dev/null | grep -qx "${SER}" \
-  || die "no existe el servicio ${SER}: ¿está corriendo mapping.launch.py y el namespace es '${NAMESPACE}'?"
+  || die "service ${SER} does not exist: is mapping.launch.py running and is the namespace '${NAMESPACE}'?"
 
-# Llama a un servicio y muestra su respuesta (si falla, enseña el motivo).
+# Calls a service and shows its response (on failure, it shows the reason).
 call_service() {
   local service="$1" type="$2" request="$3" out
   out="$(timeout 60 ros2 service call "${service}" "${type}" "${request}" 2>&1)" \
-    || { echo "${out}" >&2; die "falló la llamada a ${service}"; }
+    || { echo "${out}" >&2; die "the call to ${service} failed"; }
   echo "${out}" | sed -n '/response/,$p' | sed 's/^/      /'
 }
 
-echo "[1/2] Guardando pose graph en ${BASE}.posegraph/.data ..."
+echo "[1/2] Saving pose graph to ${BASE}.posegraph/.data ..."
 call_service "${SER}" slam_toolbox/srv/SerializePoseGraph "{filename: '${BASE}'}"
 
-echo "[2/2] Guardando imagen en ${BASE}.yaml/.pgm ..."
+echo "[2/2] Saving image to ${BASE}.yaml/.pgm ..."
 call_service "${SAVE}" slam_toolbox/srv/SaveMap "{name: {data: '${BASE}'}}"
 
 if [ -n "${PULL}" ]; then
   missing=0
   for ext in "${EXTS[@]}"; do
-    ssh "${PULL}" "[ -s '${BASE}.${ext}' ]" || { echo "ERROR: no se generó ${PULL}:${BASE}.${ext}" >&2; missing=1; }
+    ssh "${PULL}" "[ -s '${BASE}.${ext}' ]" || { echo "ERROR: ${PULL}:${BASE}.${ext} was not generated" >&2; missing=1; }
   done
-  [ "${missing}" -eq 0 ] || die "el mapa no se guardó completo en ${PULL}:${REMOTE_MAPS}"
-  echo "[+] Copiando de ${PULL} a ${MAPS_DIR} ..."
+  [ "${missing}" -eq 0 ] || die "the map was not fully saved in ${PULL}:${REMOTE_MAPS}"
+  echo "[+] Copying from ${PULL} to ${MAPS_DIR} ..."
   for ext in "${EXTS[@]}"; do
-    scp -q "${PULL}:${BASE}.${ext}" "${LOCAL_BASE}.${ext}" || die "falló scp de ${BASE}.${ext}"
+    scp -q "${PULL}:${BASE}.${ext}" "${LOCAL_BASE}.${ext}" || die "scp of ${BASE}.${ext} failed"
   done
 fi
 
 missing=0
 for ext in "${EXTS[@]}"; do
-  if [ ! -s "${LOCAL_BASE}.${ext}" ]; then echo "ERROR: no se generó ${LOCAL_BASE}.${ext}" >&2; missing=1; fi
+  if [ ! -s "${LOCAL_BASE}.${ext}" ]; then echo "ERROR: ${LOCAL_BASE}.${ext} was not generated" >&2; missing=1; fi
 done
 if [ "${missing}" -ne 0 ]; then
-  [ -n "${PULL}" ] || echo "Los servicios respondieron pero no hay archivos aquí: slam_toolbox corre en otra máquina y los guardó allí." >&2
-  [ -n "${PULL}" ] || echo "Repite con --pull usuario@host, o copia los archivos a mano con scp." >&2
-  die "el mapa no se guardó completo en ${MAPS_DIR}"
+  [ -n "${PULL}" ] || echo "The services answered but there are no files here: slam_toolbox runs on another machine and saved them there." >&2
+  [ -n "${PULL}" ] || echo "Repeat with --pull user@host, or copy the files by hand with scp." >&2
+  die "the map was not fully saved in ${MAPS_DIR}"
 fi
 
 echo
-echo "Mapa '${NAME}' guardado en ${MAPS_DIR}:"
+echo "Map '${NAME}' saved in ${MAPS_DIR}:"
 ls -l "${LOCAL_BASE}".{posegraph,data,yaml,pgm}

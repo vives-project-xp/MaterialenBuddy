@@ -1,6 +1,6 @@
-"""Visualiza el modelo create3_ld19 en RViz (sin robot real ni simulación).
+"""Display the create3_ld19 model in RViz (no real robot or simulation).
 
-Uso:
+Usage:
     ros2 launch irobot_create_description display.launch.py
     ros2 launch irobot_create_description display.launch.py laser_yaw:=-1.5707963
 """
@@ -19,17 +19,17 @@ def generate_launch_description():
 
     xacro_file = os.path.join(pkg, 'urdf', 'create3_ld19.urdf.xacro')
 
-    # Configuración de RViz: se crea desde RViz y se guarda en rviz/model.rviz.
+    # RViz configuration: created from RViz and saved to rviz/model.rviz.
     rviz_file = os.path.join(pkg, 'rviz', 'model.rviz')
 
-    # Argumento de launch para girar el LD19 (rad).
+    # Launch argument to rotate the LD19 (rad).
     laser_yaw = LaunchConfiguration('laser_yaw')
     declare_laser_yaw = DeclareLaunchArgument(
         'laser_yaw', default_value='0.0',
-        description='Giro del LD19 respecto al frente del robot (rad)')
+        description='LD19 rotation relative to the robot front (rad)')
 
-    # Procesa el xacro (los args del xacro se pasan como `nombre:=valor`). ParameterValue(..., value_type=str)
-    # hace que robot_state_publisher reciba el resultado como cadena y no intente interpretarlo.
+    # Process the xacro (xacro args are passed as `name:=value`). ParameterValue(..., value_type=str)
+    # makes robot_state_publisher receive the result as a string and not try to interpret it.
     robot_description = ParameterValue(
         Command(['xacro ', xacro_file, ' laser_yaw:=', laser_yaw]), value_type=str)
 
@@ -39,7 +39,7 @@ def generate_launch_description():
         parameters=[{'robot_description': robot_description}]
     )
 
-    # Sin él, las ruedas (articulaciones continuas) no tienen TF y RViz las marca en rojo.
+    # Without it, the wheels (continuous joints) have no TF and RViz marks them in red.
     joint_state_publisher = Node(
         package='joint_state_publisher_gui',
         executable='joint_state_publisher_gui'

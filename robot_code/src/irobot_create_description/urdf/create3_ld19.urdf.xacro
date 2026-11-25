@@ -1,20 +1,20 @@
 <?xml version="1.0"?>
-<!-- Create 3 + LiDAR LD19 montado en el centro, sobre la tapa del robot. -->
+<!-- Create 3 + LD19 LiDAR mounted at the center, on top of the robot lid. -->
 <robot name="create3_ld19" xmlns:xacro="http://ros.org/wiki/xacro">
 
-  <!-- Robot oficial (declara los args "gazebo" y "namespace" y las propiedades del cuerpo) -->
+  <!-- Official robot (declares the "gazebo" and "namespace" args and the body properties) -->
   <xacro:include filename="$(find irobot_create_description)/urdf/create3.urdf.xacro"/>
   <xacro:include filename="$(find irobot_create_description)/urdf/sensors/lidar_ld19.urdf.xacro"/>
 
-  <!-- Giro del LD19 respecto al frente del robot (rad). 0 = el 0° del sensor mira al frente. -->
+  <!-- LD19 rotation relative to the robot front (rad). 0 = the sensor's 0° points forward. -->
   <xacro:arg name="laser_yaw" default="0.0"/>
 
-  <!-- Tapa del Create 3 en el frame base_link (techo del cilindro de colisión) -->
+  <!-- Create 3 lid in the base_link frame (top of the collision cylinder) -->
   <xacro:property name="create3_top_z"
                   value="${body_z_offset + body_collision_z_offset + base_link_z_offset + body_length / 2}"/>
 
-  <!-- El frame del láser está en el plano de escaneo, ld19_scan_z_from_base por encima de la
-       base del LD19, que se apoya sobre la tapa. Centrado: x = y = 0. -->
+  <!-- The laser frame is on the scan plane, ld19_scan_z_from_base above the
+       LD19 base, which rests on the lid. Centered: x = y = 0. -->
   <xacro:lidar_ld19 name="laser" parent="base_link" gazebo="$(arg gazebo)" visualize="$(arg visualize_rays)">
     <origin xyz="0 0 ${create3_top_z + ld19_scan_z_from_base}" rpy="0 0 $(arg laser_yaw)"/>
   </xacro:lidar_ld19>

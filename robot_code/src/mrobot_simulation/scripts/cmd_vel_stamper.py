@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Convierte geometry_msgs/Twist en geometry_msgs/TwistStamped.
+"""Convert geometry_msgs/Twist into geometry_msgs/TwistStamped.
 
-En ROS 2 Jazzy el diff_drive_controller recibe TwistStamped en `diffdrive_controller/cmd_vel`, pero el teleop
-(teleop_twist_keyboard) y Nav2 publican Twist en `cmd_vel`. Este nodo hace de puente entre los dos.
-Solo se usa en la simulación: el Create 3 real recibe Twist directamente en /r2/cmd_vel.
+In ROS 2 Jazzy the diff_drive_controller receives TwistStamped on `diffdrive_controller/cmd_vel`, but the teleop
+(teleop_twist_keyboard) and Nav2 publish Twist on `cmd_vel`. This node bridges the two.
+Only used in simulation: the real Create 3 receives Twist directly on /r2/cmd_vel.
 """
 
 import rclpy
@@ -23,7 +23,7 @@ class CmdVelStamper(Node):
             "input_topic").value, self._on_twist, qos_profile=10)
 
     def _on_twist(self, msg):
-        # Con use_sim_time:=true el reloj del nodo es el de Gazebo.
+        # With use_sim_time:=true the node clock is the Gazebo one.
         stamped_msg = TwistStamped()
         stamped_msg.header.stamp = self.get_clock().now().to_msg()
         stamped_msg.header.frame_id = "base_link"

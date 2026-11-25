@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Republica nav_msgs/Odometry de BEST_EFFORT a RELIABLE.
+"""Republish nav_msgs/Odometry from BEST_EFFORT to RELIABLE.
 
-El Create 3 publica /<ns>/odom con QoS BEST_EFFORT y depth 1. Los nodos de Nav2 (controller_server,
-bt_navigator) se suscriben con RELIABLE y nunca emparejan con ese publicador. Este nodo se suscribe con
-el QoS del sensor y republica el MISMO mensaje en `odom_reliable` (nombre relativo: respeta el namespace).
-Solo se usa con el robot real.
+The Create 3 publishes /<ns>/odom with BEST_EFFORT QoS and depth 1. The Nav2 nodes (controller_server,
+bt_navigator) subscribe with RELIABLE and never match that publisher. This node subscribes with the
+sensor QoS and republishes the SAME message on `odom_reliable` (relative name: it respects the namespace).
+Only used with the real robot.
 """
 
 import rclpy
@@ -25,7 +25,7 @@ class OdomRelay(Node):
             Odometry, self.get_parameter("output_topic").value, output_qos
         )
 
-        # El callback solo reenvía el mensaje recibido.
+        # The callback only forwards the received message.
         self.create_subscription(
             Odometry,
             self.get_parameter("input_topic").value,

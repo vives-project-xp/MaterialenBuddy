@@ -1,20 +1,20 @@
-# Código de terceros incluido en el repositorio
+# Third-party code included in the repository
 
-Este paquete es una copia del driver oficial del LiDAR LD19 / LD06 / STL27L de LDRobot.
-Se incluye aquí para no tener que clonarlo aparte al preparar el robot.
+This package is a copy of LDRobot's official driver for the LD19 / LD06 / STL27L LiDARs.
+It is included here so it does not have to be cloned separately when setting up the robot.
 
-- **Origen:** <https://github.com/ldrobotSensorTeam/ldlidar_stl_ros2> (rama `master`)
-- **Commit copiado:** `bf668a89baf722a787dadc442860dcbf33a82f5a`
-- **Licencia:** MIT, © 2020 SHENZHEN LDROBOT CO., LTD. (ver `LICENSE`; debe conservarse)
-- **Se excluyó:** la carpeta `.git` y el `.gitignore` del original.
-- **Se eliminó, por no ser necesario:** `launch/` (launch de ejemplo del fabricante; el nuestro está en
-  `hrobot_bringup`), `rviz2/`, `scripts/` (reglas udev de ejemplo; las gestiona `scripts/setup_pi.sh`
-  del proyecto) y `README.md`. Se conserva todo el código del driver, incluido el soporte de LD06 y STL27L.
+- **Origin:** <https://github.com/ldrobotSensorTeam/ldlidar_stl_ros2> (branch `master`)
+- **Copied commit:** `bf668a89baf722a787dadc442860dcbf33a82f5a`
+- **License:** MIT, (c) 2020 SHENZHEN LDROBOT CO., LTD. (see `LICENSE`; it must be kept)
+- **Excluded:** the `.git` folder and the original's `.gitignore`.
+- **Removed, because it is not needed:** `launch/` (the manufacturer's example launch files; ours is in
+  `mrobot_bringup`), `rviz2/`, `scripts/` (example udev rules; the project's `scripts/setup_pi.sh`
+  handles them) and `README.md`. All the driver code is kept, including LD06 and STL27L support.
 
-## Modificaciones respecto al original
+## Changes with respect to the original
 
-1. `ldlidar_driver/include/logger/log_module.h`: se descomentó `#include <pthread.h>`.
-   Sin él, `pthread_mutex_t` queda sin declarar y la compilación falla con el GCC de Ubuntu 24.04.
-2. `CMakeLists.txt`: se quitó `install(DIRECTORY launch rviz2 ...)`, porque esas carpetas ya no existen.
+1. `ldlidar_driver/include/logger/log_module.h`: `#include <pthread.h>` was uncommented.
+   Without it, `pthread_mutex_t` is undeclared and the build fails with Ubuntu 24.04's GCC.
+2. `CMakeLists.txt`: `install(DIRECTORY launch rviz2 ...)` was removed, because those folders no longer exist.
 
-Cualquier otro cambio en este paquete debe anotarse aquí.
+Any other change in this package must be noted here.

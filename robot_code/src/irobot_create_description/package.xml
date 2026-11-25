@@ -3,14 +3,14 @@
 <package format="3">
   <name>irobot_create_description</name>
   <version>0.0.0</version>
-  <description>Descripción del robot</description>
-  <maintainer email="tu_correo@ejemplo.com">Brandon</maintainer>
-  <!-- BSD-3-Clause: URDF/XACRO y mallas oficiales de iRobot (ver LICENSE y ATTRIBUTION.md).
-       Apache-2.0: archivos propios (create3_ld19, lidar_ld19, launch y rviz). -->
+  <description>Robot description (URDF/XACRO) of the Create 3 with the LD19 LiDAR</description>
+  <maintainer email="your_email@example.com">Brandon</maintainer>
+  <!-- BSD-3-Clause: official iRobot URDF/XACRO and meshes (see LICENSE and ATTRIBUTION.md).
+       Apache-2.0: own files (create3_ld19, lidar_ld19, launch and rviz). -->
   <license>BSD-3-Clause</license>
   <license>Apache-2.0</license>
 
-  <!-- Herramienta con la que se compila el paquete (ament_cmake) -->
+  <!-- Tool used to build the package (ament_cmake) -->
   <buildtool_depend>ament_cmake</buildtool_depend>
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>joint_state_publisher_gui</exec_depend>

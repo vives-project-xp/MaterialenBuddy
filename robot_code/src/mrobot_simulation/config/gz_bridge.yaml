@@ -1,0 +1,18 @@
+# ros_gz_bridge (parameter_bridge): only what ROS 2 does NOT already publish.
+# The simulation runs WITHOUT a namespace (/scan, /clock...): same as the real robot with robot_namespace:=''.
+# direction: GZ_TO_ROS | ROS_TO_GZ | BIDIRECTIONAL.
+#
+# There is no need to bridge cmd_vel, odom, tf or joint_states: the wheel controller (ros2_control) runs
+# on the ROS 2 side inside the gz_ros2_control plugin and publishes /odom, /tf and /joint_states directly.
+- ros_topic_name: /clock
+  gz_topic_name: /clock
+  ros_type_name: rosgraph_msgs/msg/Clock
+  gz_type_name: gz.msgs.Clock
+  direction: GZ_TO_ROS
+
+# Simulated LD19 LiDAR (gpu_lidar sensor defined in sensors/lidar_ld19.urdf.xacro)
+- ros_topic_name: /scan
+  gz_topic_name: /scan
+  ros_type_name: sensor_msgs/msg/LaserScan
+  gz_type_name: gz.msgs.LaserScan
+  direction: GZ_TO_ROS

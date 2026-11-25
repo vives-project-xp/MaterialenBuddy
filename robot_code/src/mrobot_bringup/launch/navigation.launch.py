@@ -1,17 +1,17 @@
-"""Robot real, navegación: hardware_base (robot_state_publisher + LD19 + relays) + map_server + AMCL + Nav2 + RViz.
+"""Real robot, navigation: hardware_base (robot_state_publisher + LD19 + relays) + map_server + AMCL + Nav2 + RViz.
 
-El mapa se crea antes con `mapping.launch.py` (teleoperación) y se guarda con scripts/save_map.sh.
-Aquí se navega sobre él con AMCL.
+The map is created beforehand with `mapping.launch.py` (teleoperation) and saved with scripts/save_map.sh.
+Here the robot navigates on it with AMCL.
 
-AMCL necesita saber dónde está el robot al arrancar. Por defecto (set_initial_pose:=true) lo coloca en
-initial_x/y/yaw, que por defecto es 0,0,0 = el origen del mapa, o sea el punto desde el que se mapeó
-(el dock): pon el robot ahí antes de lanzar. Si está en otro sitio, pasa initial_x/y/yaw, o
-set_initial_pose:=false y usa "2D Pose Estimate" en RViz.
+AMCL needs to know where the robot is at startup. By default (set_initial_pose:=true) it places it at
+initial_x/y/yaw, which defaults to 0,0,0 = the map origin, i.e. the point the map was started from
+(the dock): put the robot there before launching. If it is somewhere else, pass initial_x/y/yaw, or
+set_initial_pose:=false and use "2D Pose Estimate" in RViz.
 
-Cada include aplica el namespace por su cuenta: este launch NO lo envuelve en otro.
+Each include applies the namespace on its own: this launch does NOT wrap them in another one.
 
-Uso:
-    ros2 launch hrobot_bringup navigation.launch.py map_yaml:=$HOME/MaterialenBuddy/robot_code/maps/mapa1.yaml \\
+Usage:
+    ros2 launch mrobot_bringup navigation.launch.py map_yaml:=$HOME/MaterialenBuddy/robot_code/maps/map1.yaml \\
         lidar_port:=/dev/ldlidar
 """
 
@@ -25,12 +25,12 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
-from hrobot_namespace import robot_namespace_argument  # noqa: E402
+from mrobot_namespace import robot_namespace_argument  # noqa: E402
 
 
 def generate_launch_description():
     launch_dir = os.path.join(
-        get_package_share_directory("hrobot_bringup"), "launch")
+        get_package_share_directory("mrobot_bringup"), "launch")
     namespace = LaunchConfiguration("robot_namespace")
     use_sim_time = LaunchConfiguration("use_sim_time")
 
@@ -47,8 +47,8 @@ def generate_launch_description():
         }.items(),
     )
 
-    # odom_topic "odom_reliable": el Create 3 publica odom BEST_EFFORT y Nav2 lo pide RELIABLE;
-    # el odom_relay que arranca hardware_base lo republica en ese topic.
+    # odom_topic "odom_reliable": the Create 3 publishes odom BEST_EFFORT and Nav2 asks for RELIABLE;
+    # the odom_relay started by hardware_base republishes it on that topic.
     nav = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(launch_dir, "nav.launch.py")),
@@ -70,29 +70,29 @@ def generate_launch_description():
             robot_namespace_argument(),
             DeclareLaunchArgument("use_sim_time", default_value="false"),
             DeclareLaunchArgument(
-                "map_yaml", description="Ruta absoluta al .yaml del mapa."),
+                "map_yaml", description="Absolute path to the map .yaml."),
             DeclareLaunchArgument(
                 "rviz", default_value="true", description="true|false"),
             DeclareLaunchArgument(
                 "lidar_port",
                 default_value="/dev/ttyUSB0",
-                description="Puerto serie del LD19; p. ej. /dev/ldlidar.",
+                description="LD19 serial port; e.g. /dev/ldlidar.",
             ),
             DeclareLaunchArgument("lidar_baudrate", default_value="230400"),
             DeclareLaunchArgument(
                 "laser_scan_dir", default_value="true", description="true|false"),
             DeclareLaunchArgument(
-                "laser_yaw", default_value="0.0", description="Giro del LD19 (rad)."),
+                "laser_yaw", default_value="0.0", description="LD19 rotation (rad)."),
             DeclareLaunchArgument(
                 "set_initial_pose",
                 default_value="true",
-                description="true = AMCL arranca en initial_x/y/yaw (por defecto el origen del mapa, el dock). "
-                "false = fijar la pose con 2D Pose Estimate en RViz.",
+                description="true = AMCL starts at initial_x/y/yaw (by default the map origin, the dock). "
+                "false = set the pose with 2D Pose Estimate in RViz.",
             ),
             DeclareLaunchArgument("initial_x", default_value="0.0"),
             DeclareLaunchArgument("initial_y", default_value="0.0"),
             DeclareLaunchArgument("initial_yaw", default_value="0.0"),
-            nav,  # primero: valida map_yaml antes de arrancar ningún proceso
+            nav,  # first: validates map_yaml before any process starts
             hardware,
         ]
     )

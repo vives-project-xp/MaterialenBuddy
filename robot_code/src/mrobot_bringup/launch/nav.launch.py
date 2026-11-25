@@ -1,20 +1,20 @@
-"""Navegación autónoma con Nav2 + AMCL + RViz. Sin hardware.
+"""Autonomous navigation with Nav2 + AMCL + RViz. No hardware.
 
-Lo incluye `navigation.launch.py` (robot real) y, más adelante, la simulación.
+Included by `navigation.launch.py` (real robot) and by the simulation.
 
-Localización: map_server (mapa guardado) + AMCL, que publica map -> odom. No corre slam_toolbox.
+Localization: map_server (saved map) + AMCL, which publishes map -> odom. slam_toolbox does not run.
 
-Argumentos: robot_namespace (env CREATE3_ROBOT_NAMESPACE o 'r2'; vacío = ninguno), use_sim_time (false),
-map_yaml (ruta absoluta al .yaml del mapa; obligatorio), rviz (true), params_file (config/nav2_params.yaml),
-autostart (true), odom_topic ('odom'; 'odom_reliable' en el robot real, ver odom_relay.py),
+Arguments: robot_namespace (env CREATE3_ROBOT_NAMESPACE or 'r2'; empty = none), use_sim_time (false),
+map_yaml (absolute path to the map .yaml; required), rviz (true), params_file (config/nav2_params.yaml),
+autostart (true), odom_topic ('odom'; 'odom_reliable' on the real robot, see odom_relay.py),
 set_initial_pose (false), initial_x / initial_y / initial_yaw (0.0).
 
-Namespace: igual que slam.launch.py (PushRosNamespace, TF relativo, RewrittenYaml).
+Namespace: same as slam.launch.py (PushRosNamespace, relative TF, RewrittenYaml).
 
-Cómo está montado Nav2: son varios nodos con ciclo de vida. Cada grupo lo arranca un lifecycle_manager
-que lee la lista `node_names` del YAML y los configura y activa en orden:
-  * localización: map_server + amcl            (lifecycle_manager_localization)
-  * navegación:   controller_server, smoother_server, planner_server, behavior_server, bt_navigator
+How Nav2 is put together: it is several lifecycle nodes. Each group is started by a lifecycle_manager
+that reads the `node_names` list from the YAML and configures and activates them in order:
+  * localization: map_server + amcl            (lifecycle_manager_localization)
+  * navigation:   controller_server, smoother_server, planner_server, behavior_server, bt_navigator
                                                (lifecycle_manager_navigation)
 """
 
@@ -29,7 +29,7 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
-from hrobot_namespace import (  # noqa: E402
+from mrobot_namespace import (  # noqa: E402
     namespaced,
     resolve_namespace,
     rewrite_yaml,
@@ -40,7 +40,7 @@ from hrobot_namespace import (  # noqa: E402
 
 
 def _truthy(context, name):
-    """Lee un argumento de launch y lo interpreta como booleano."""
+    """Read a launch argument and interpret it as a boolean."""
     return LaunchConfiguration(name).perform(context).strip().lower() in ("true", "1", "yes")
 
 
@@ -48,21 +48,21 @@ def _setup(context, *args, **kwargs):
     namespace = resolve_namespace(context)
     use_sim_time = LaunchConfiguration("use_sim_time")
     autostart = LaunchConfiguration("autostart")
-    pkg = get_package_share_directory("hrobot_bringup")
+    pkg = get_package_share_directory("mrobot_bringup")
 
-    # El mapa es obligatorio. Este launch se incluye PRIMERO, así que el error salta antes de
-    # arrancar ningún proceso.
+    # The map is required. This launch is included FIRST, so the error is raised before
+    # any process is started.
     map_yaml_arg = LaunchConfiguration("map_yaml").perform(context).strip()
     map_yaml = os.path.abspath(os.path.expanduser(map_yaml_arg)) if map_yaml_arg else ""
     if not map_yaml or not os.path.isfile(map_yaml):
         raise RuntimeError(
-            f"map_yaml:='{map_yaml_arg}' no existe o está vacío. Pasa la ruta absoluta al .yaml del mapa, "
-            "p. ej. map_yaml:=$HOME/MaterialenBuddy/robot_code/maps/mapa1.yaml "
-            "(se genera con scripts/save_map.sh)."
+            f"map_yaml:='{map_yaml_arg}' does not exist or is empty. Pass the absolute path to the map .yaml, "
+            "e.g. map_yaml:=$HOME/MaterialenBuddy/robot_code/maps/map1.yaml "
+            "(it is generated with scripts/save_map.sh)."
         )
 
-    # El YAML pasa por DOS transformaciones y el ORDEN importa: primero los marcadores
-    # ('/<robot_namespace>/scan' -> '/r2/scan') y después rewrite_yaml (envuelve los nodos bajo r2).
+    # The YAML goes through TWO transformations and the ORDER matters: first the markers
+    # ('/<robot_namespace>/scan' -> '/r2/scan') and then rewrite_yaml (wraps the nodes under r2).
     params_file = rewrite_yaml(
         substitute_namespace_markers(LaunchConfiguration("params_file"), namespace),
         namespace,
@@ -71,11 +71,11 @@ def _setup(context, *args, **kwargs):
     tf_remaps = tf_remappings(namespace)
     odom_topic = LaunchConfiguration("odom_topic")
 
-    # Parámetros comunes a todos los nodos de Nav2.
+    # Parameters shared by all the Nav2 nodes.
     common = [params_file, {"use_sim_time": use_sim_time}]
 
     def nav2_node(package, executable, name=None, extra=None):
-        # `extra` es un dict de parámetros que PISA los del YAML (p. ej. yaml_filename del map_server).
+        # `extra` is a dict of parameters that OVERRIDES the YAML ones (e.g. the map_server yaml_filename).
         return Node(
             package=package,
             executable=executable,
@@ -85,7 +85,7 @@ def _setup(context, *args, **kwargs):
             remappings=tf_remaps,
         )
 
-    # Pose inicial de AMCL (solo se usa si set_initial_pose es true).
+    # AMCL initial pose (only used if set_initial_pose is true).
     initial_pose = {
         "set_initial_pose": _truthy(context, "set_initial_pose"),
         "initial_pose": {
@@ -96,7 +96,7 @@ def _setup(context, *args, **kwargs):
         },
     }
 
-    # Localización: map_server + amcl. El name del lifecycle_manager debe coincidir con la clave del YAML.
+    # Localization: map_server + amcl. The lifecycle_manager name must match the YAML key.
     localization_nodes = [
         nav2_node("nav2_map_server", "map_server", extra={"yaml_filename": map_yaml}),
         nav2_node("nav2_amcl", "amcl", extra=initial_pose),
@@ -109,7 +109,7 @@ def _setup(context, *args, **kwargs):
         ),
     ]
 
-    # Navegación: controller y bt_navigator leen la odometría (odom_topic).
+    # Navigation: controller and bt_navigator read the odometry (odom_topic).
     navigation_nodes = [
         nav2_node("nav2_controller", "controller_server", extra={"odom_topic": odom_topic}),
         nav2_node("nav2_smoother", "smoother_server"),
@@ -125,7 +125,7 @@ def _setup(context, *args, **kwargs):
         ),
     ]
 
-    # RViz: '/<robot_namespace>' en el .rviz se sustituye por '/<ns>' (o '' sin namespace).
+    # RViz: '/<robot_namespace>' in the .rviz is replaced by '/<ns>' (or '' without a namespace).
     rviz = Node(
         package="rviz2",
         executable="rviz2",
@@ -142,7 +142,7 @@ def _setup(context, *args, **kwargs):
 
 def generate_launch_description():
     default_params = os.path.join(
-        get_package_share_directory("hrobot_bringup"), "config", "nav2_params.yaml"
+        get_package_share_directory("mrobot_bringup"), "config", "nav2_params.yaml"
     )
     return LaunchDescription(
         [
@@ -151,7 +151,7 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "map_yaml",
                 default_value="",
-                description="Ruta absoluta al .yaml del mapa (map_server). Obligatorio.",
+                description="Absolute path to the map .yaml (map_server). Required.",
             ),
             DeclareLaunchArgument("rviz", default_value="true", description="true|false"),
             DeclareLaunchArgument("params_file", default_value=default_params),
@@ -159,12 +159,12 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "odom_topic",
                 default_value="odom",
-                description="Topic de odometría que lee Nav2. 'odom_reliable' con el robot real.",
+                description="Odometry topic read by Nav2. 'odom_reliable' with the real robot.",
             ),
             DeclareLaunchArgument(
                 "set_initial_pose",
                 default_value="false",
-                description="true = AMCL arranca en initial_x/y/yaw; false = usar 2D Pose Estimate en RViz.",
+                description="true = AMCL starts at initial_x/y/yaw; false = use 2D Pose Estimate in RViz.",
             ),
             DeclareLaunchArgument("initial_x", default_value="0.0"),
             DeclareLaunchArgument("initial_y", default_value="0.0"),

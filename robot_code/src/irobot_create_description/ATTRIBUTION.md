@@ -1,21 +1,21 @@
-# Procedencia y licencias
+# Provenance and licenses
 
-Este paquete mezcla archivos oficiales de iRobot (sin modificar) y archivos propios.
+This package mixes official iRobot files (unmodified) and the project's own files.
 
-## Archivos oficiales de iRobot (BSD de 3 cláusulas, © 2021 iRobot Corporation)
+## Official iRobot files (BSD 3-Clause, (c) 2021 iRobot Corporation)
 
-- **Origen:** <https://github.com/iRobotEducation/create3_sim> (rama `jazzy`),
-  carpeta `irobot_create_common/irobot_create_description`.
-- **Licencia:** ver el archivo `LICENSE` de este paquete (debe conservarse en cualquier redistribución).
-- **Archivos:**
-  - `meshes/` (todas las mallas).
+- **Origin:** <https://github.com/iRobotEducation/create3_sim> (branch `jazzy`),
+  folder `irobot_create_common/irobot_create_description`.
+- **License:** see the `LICENSE` file in this package (it must be kept in any redistribution).
+- **Files:**
+  - `meshes/` (all the meshes).
   - `urdf/create3.urdf.xacro`, `bumper`, `button`, `caster`, `common_properties`, `wheel`, `wheel_drop`
-    y `wheel_with_wheeldrop` (`*.urdf.xacro`).
-  - `urdf/dock/` y `urdf/sensors/`, salvo `lidar_ld19.urdf.xacro`.
-- **Modificaciones:** ninguna. Si alguna vez se edita un archivo oficial, anotarlo aquí.
+    and `wheel_with_wheeldrop` (`*.urdf.xacro`).
+  - `urdf/dock/` and `urdf/sensors/`, except `lidar_ld19.urdf.xacro`.
+- **Modifications:** none. If an official file is ever edited, note it here.
 
-## Archivos propios (Apache-2.0)
+## Own files (Apache-2.0)
 
-- `urdf/create3_ld19.urdf.xacro`: une el Create 3 con el LiDAR LD19.
-- `urdf/sensors/lidar_ld19.urdf.xacro`: macro del LD19 con los datos del datasheet.
-- `launch/display.launch.py` y `rviz/`.
+- `urdf/create3_ld19.urdf.xacro`: joins the Create 3 with the LD19 LiDAR.
+- `urdf/sensors/lidar_ld19.urdf.xacro`: LD19 macro with the datasheet values.
+- `launch/display.launch.py` and `rviz/`.

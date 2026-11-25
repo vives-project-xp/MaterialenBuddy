@@ -3,7 +3,7 @@
 <package format="3">
   <name>irobot_create_control</name>
   <version>3.0.4</version>
-  <description>Configuración del controlador diferencial (diff_drive_controller) del iRobot(R) Create(R) 3 para Gazebo. Copia mínima del paquete oficial, ver VENDORED.md.</description>
+  <description>Differential drive controller (diff_drive_controller) configuration of the iRobot(R) Create(R) 3 for Gazebo. Minimal copy of the official package, see VENDORED.md.</description>
   <maintainer email="ekumen@irbt.onmicrosoft.com">Ekumen</maintainer>
   <license>BSD</license>
 

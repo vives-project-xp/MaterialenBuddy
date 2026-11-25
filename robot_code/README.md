@@ -1,176 +1,176 @@
 # robot_code
 
-Código ROS 2 del robot de MaterialenBuddy: un **iRobot Create 3** con una **Raspberry Pi 5** y un **LiDAR LD19**,
-sobre **ROS 2 Jazzy**.
+ROS 2 code for the MaterialenBuddy robot: an **iRobot Create 3** with a **Raspberry Pi 5** and an **LD19 LiDAR**,
+running **ROS 2 Jazzy**.
 
-El robot hace tres cosas:
+The robot does three things:
 
-1. **Mapea** un espacio con `slam_toolbox`, moviéndolo por teleoperación.
-2. **Navega** de forma autónoma sobre el mapa guardado, con AMCL y Nav2 (las metas se dan desde RViz).
-3. Se **simula** antes en Gazebo Harmonic.
+1. **Maps** a space with `slam_toolbox`, driven by teleoperation.
+2. **Navigates** autonomously on the saved map, with AMCL and Nav2 (goals are given from RViz).
+3. It is **simulated** first in Gazebo Harmonic.
 
-> **Estado: nada de esto se ha probado todavía.** El código está escrito y revisado, y los scripts y
-> archivos de configuración pasan las comprobaciones de sintaxis, pero no se ha ejecutado con ROS 2, con Gazebo ni con el
-> robot. Ver [Primera prueba](#primera-prueba-qué-comprobar).
+> **Status: none of this has been tested yet.** The code is written and reviewed, and the scripts and
+> configuration files pass syntax checks, but it has not been run with ROS 2, Gazebo or the
+> robot. See [First run](#first-run-what-to-check).
 
-## Estructura
+## Structure
 
 ```text
 robot_code/
-├── maps/                          mapas guardados (el contenido no se versiona)
+├── maps/                          saved maps (the contents are not versioned)
 ├── scripts/
-│   ├── setup_pi.sh                prepara la Pi: rosdep, red ROS 2, regla udev. No compila
-│   ├── save_map.sh                guarda el mapa que está construyendo slam_toolbox
-│   └── rviz_remote.sh             abre RViz en tu PC para el robot que corre en la Pi
+│   ├── setup_pi.sh                prepares the Pi: rosdep, ROS 2 network, udev rule. Does not build
+│   ├── save_map.sh                saves the map that slam_toolbox is building
+│   └── rviz_remote.sh             opens RViz on your PC for the robot running on the Pi
 └── src/
-    ├── irobot_create_description/ URDF del Create 3 (oficial) + LD19 (propio) + launch para verlo en RViz
-    ├── hrobot_bringup/            robot real: LiDAR, mapeo y navegación
-    ├── hrobot_simulation/         Gazebo Harmonic
-    ├── irobot_create_control/     configuración del controlador de ruedas (solo simulación; copia mínima)
-    └── ldlidar_stl_ros2/          driver oficial del LD19 (copia, no hace falta clonarlo)
+    ├── irobot_create_description/ Create 3 URDF (official) + LD19 (own) + launch to view it in RViz
+    ├── mrobot_bringup/            real robot: LiDAR, mapping and navigation
+    ├── mrobot_simulation/         Gazebo Harmonic
+    ├── irobot_create_control/     wheel controller configuration (simulation only; minimal copy)
+    └── ldlidar_stl_ros2/          official LD19 driver (a copy, no need to clone it)
 ```
 
-El prefijo `hrobot_` viene del proyecto del que se partió; los paquetes de iRobot conservan su nombre original
-porque los URDF oficiales lo referencian.
+The `mrobot_` prefix marks this project's own packages; the iRobot packages keep their original name
+because the official URDFs reference it.
 
-## Cómo encaja
+## How it fits together
 
-- El **Create 3 corre su propio firmware**: se alcanza por red y vive en el namespace `/r2`
-  (`/r2/odom`, `/r2/tf`, `/r2/cmd_vel`...). Este código **no lo arranca**.
-- La **Raspberry Pi** corre este workspace: lee el LD19 por USB, publica el modelo del robot y ejecuta `slam_toolbox` o
-  Nav2. Pi y Create 3 deben usar el mismo `ROS_DOMAIN_ID` y el mismo RMW.
-- **RViz** conviene abrirlo en tu PC (`scripts/rviz_remote.sh`), no en la Pi.
+- The **Create 3 runs its own firmware**: it is reached over the network and lives in the `/r2` namespace
+  (`/r2/odom`, `/r2/tf`, `/r2/cmd_vel`...). This code **does not start it**.
+- The **Raspberry Pi** runs this workspace: it reads the LD19 over USB, publishes the robot model and runs `slam_toolbox` or
+  Nav2. The Pi and the Create 3 must use the same `ROS_DOMAIN_ID` and the same RMW.
+- **RViz** is best opened on your PC (`scripts/rviz_remote.sh`), not on the Pi.
 
-Todo el stack cuelga del namespace del robot (`/r2/scan`, `/r2/map`...). Se cambia con el argumento
-`robot_namespace:=` o la variable de entorno `CREATE3_ROBOT_NAMESPACE`. La simulación corre **sin namespace**.
+The whole stack hangs from the robot namespace (`/r2/scan`, `/r2/map`...). It is changed with the
+`robot_namespace:=` argument or the `CREATE3_ROBOT_NAMESPACE` environment variable. The simulation runs **without a namespace**.
 
-## Requisitos
+## Requirements
 
-- Ubuntu con **ROS 2 Jazzy**, `git`, `colcon` y `rosdep`.
-- Para la simulación (en un PC): `ros-jazzy-ros-gz`, `ros-jazzy-gz-ros2-control` y `ros-jazzy-ros2-controllers`.
+- Ubuntu with **ROS 2 Jazzy**, `git`, `colcon` and `rosdep`.
+- For the simulation (on a PC): `ros-jazzy-ros-gz`, `ros-jazzy-gz-ros2-control` and `ros-jazzy-ros2-controllers`.
 
-## Instalación en la Raspberry Pi
+## Installation on the Raspberry Pi
 
 ```bash
 cd robot_code
-scripts/setup_pi.sh                       # rosdep, ROS_DOMAIN_ID / RMW, regla udev /dev/ldlidar
-colcon build --symlink-install --parallel-workers 2 --packages-up-to hrobot_bringup
+scripts/setup_pi.sh                       # rosdep, ROS_DOMAIN_ID / RMW, udev rule /dev/ldlidar
+colcon build --symlink-install --parallel-workers 2 --packages-up-to mrobot_bringup
 source install/setup.bash
 ```
 
-`setup_pi.sh` no compila: el `colcon build` lo lanzas tú. `--packages-up-to` deja fuera la simulación y
-`--parallel-workers 2` evita agotar la RAM de la Pi. Opciones del script: `--skip-udev`, `--skip-net`, `--domain-id N`,
-`--rmw NOMBRE` (ver `scripts/setup_pi.sh --help`).
+`setup_pi.sh` does not build: you run `colcon build` yourself. `--packages-up-to` leaves the simulation out and
+`--parallel-workers 2` keeps the Pi from running out of RAM. Script options: `--skip-udev`, `--skip-net`, `--domain-id N`,
+`--rmw NAME` (see `scripts/setup_pi.sh --help`).
 
-Después de `setup_pi.sh`, cierra sesión y vuelve a entrar (grupo `dialout`), y configura el **mismo RMW y dominio en el Create 3**
-(su interfaz web, *Application > ROS 2*). Reinicia su aplicación tras cambiarlos. Para comprobar la conexión:
+After `setup_pi.sh`, log out and back in (`dialout` group), and configure the **same RMW and domain on the Create 3**
+(its web UI, *Application > ROS 2*). Restart its application after changing them. To check the connection:
 
 ```bash
 ros2 topic list | grep -E '/r2/(odom|cmd_vel)'
 ```
 
-## Uso con el robot real
+## Using the real robot
 
-### 1. Mapear
+### 1. Map
 
-En la Pi:
+On the Pi:
 
 ```bash
-ros2 launch hrobot_bringup mapping.launch.py lidar_port:=/dev/ldlidar rviz:=false
+ros2 launch mrobot_bringup mapping.launch.py lidar_port:=/dev/ldlidar rviz:=false
 ```
 
-En tu PC, para ver el mapa:
+On your PC, to see the map:
 
 ```bash
 scripts/rviz_remote.sh mapping
 ```
 
-Mueve el robot con el teclado (la Pi o tu PC):
+Drive the robot with the keyboard (from the Pi or your PC):
 
 ```bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/r2/cmd_vel
 ```
 
-Cuando el mapa esté completo, guárdalo (con `mapping.launch.py` todavía corriendo):
+When the map is complete, save it (with `mapping.launch.py` still running):
 
 ```bash
-scripts/save_map.sh mapa1                          # en la máquina donde corre slam_toolbox
-scripts/save_map.sh mapa1 --pull usuario@host-pi   # si lo ejecutas desde otra máquina
+scripts/save_map.sh map1                           # on the machine where slam_toolbox runs
+scripts/save_map.sh map1 --pull user@pi-host       # if you run it from another machine
 ```
 
-Genera en `maps/` cuatro archivos: `mapa1.yaml` y `mapa1.pgm` (la imagen, para navegar) y `mapa1.posegraph` y
-`mapa1.data` (el grafo de poses de slam_toolbox). Son archivos locales: no se suben al repositorio.
+This generates four files in `maps/`: `map1.yaml` and `map1.pgm` (the image, for navigating) and `map1.posegraph` and
+`map1.data` (the slam_toolbox pose graph). They are local files: they are not pushed to the repository.
 
-### 2. Navegar
+### 2. Navigate
 
-Pon el robot en el punto desde el que mapeaste (el origen del mapa, normalmente el dock) y, en la Pi:
+Put the robot at the point you mapped from (the map origin, normally the dock) and, on the Pi:
 
 ```bash
-ros2 launch hrobot_bringup navigation.launch.py map_yaml:=$PWD/maps/mapa1.yaml lidar_port:=/dev/ldlidar rviz:=false
+ros2 launch mrobot_bringup navigation.launch.py map_yaml:=$PWD/maps/map1.yaml lidar_port:=/dev/ldlidar rviz:=false
 ```
 
-En tu PC: `scripts/rviz_remote.sh navigation`. La meta se da con la herramienta **2D Goal Pose** de RViz.
+On your PC: `scripts/rviz_remote.sh navigation`. The goal is given with RViz's **2D Goal Pose** tool.
 
-AMCL arranca en `initial_x/y/yaw` (por defecto `0 0 0`, el origen del mapa). Si el robot está en otro sitio, pasa esos
-argumentos o `set_initial_pose:=false` y usa **2D Pose Estimate** en RViz.
+AMCL starts at `initial_x/y/yaw` (`0 0 0` by default, the map origin). If the robot is somewhere else, pass those
+arguments or `set_initial_pose:=false` and use **2D Pose Estimate** in RViz.
 
-### Argumentos útiles
+### Useful arguments
 
-| Argumento | Dónde | Para qué |
+| Argument | Where | What for |
 |---|---|---|
-| `lidar_port` | mapping, navigation | Puerto del LD19 (`/dev/ldlidar` con la regla udev; `/dev/ttyUSB0` sin ella) |
-| `laser_scan_dir` | mapping, navigation | Sentido de giro del LD19: cámbialo si el scan sale invertido |
-| `laser_yaw` | mapping, navigation | Giro del sensor respecto al frente del robot (rad). Con el sensor real se usó `-1.5707963` |
-| `robot_namespace` | todos | Namespace del robot (por defecto `r2`; vacío = ninguno) |
-| `rviz` | todos | `false` para no abrir RViz (en la Pi) |
-| `map_yaml` | navigation | Ruta absoluta al `.yaml` del mapa (obligatorio) |
+| `lidar_port` | mapping, navigation | LD19 port (`/dev/ldlidar` with the udev rule; `/dev/ttyUSB0` without it) |
+| `laser_scan_dir` | mapping, navigation | LD19 scan direction: flip it if the scan comes out inverted |
+| `laser_yaw` | mapping, navigation | Sensor rotation relative to the robot front (rad). `-1.5707963` was used with the real sensor |
+| `robot_namespace` | all | Robot namespace (default `r2`; empty = none) |
+| `rviz` | all | `false` to not open RViz (on the Pi) |
+| `map_yaml` | navigation | Absolute path to the map `.yaml` (required) |
 
-## Simulación (en un PC)
+## Simulation (on a PC)
 
 ```bash
 rosdep install --from-paths src --ignore-src -y
 colcon build --symlink-install
 source install/setup.bash
-ros2 launch hrobot_simulation sim.launch.py                              # mapear
-ros2 run teleop_twist_keyboard teleop_twist_keyboard                     # en otra terminal
-scripts/save_map.sh sala --namespace ''                                  # la simulación no usa namespace
-ros2 launch hrobot_simulation sim.launch.py nav:=true map_yaml:=$PWD/maps/sala.yaml
+ros2 launch mrobot_simulation sim.launch.py                              # map
+ros2 run teleop_twist_keyboard teleop_twist_keyboard                     # in another terminal
+scripts/save_map.sh room --namespace ''                                  # the simulation does not use a namespace
+ros2 launch mrobot_simulation sim.launch.py nav:=true map_yaml:=$PWD/maps/room.yaml
 ```
 
-Otros argumentos: `headless:=true` (sin interfaz de Gazebo), `x`, `y`, `yaw` (pose inicial) y `world` (otro mundo `.sdf`).
-El mundo por defecto es una sala de 8×8 m con un tabique y obstáculos.
+Other arguments: `headless:=true` (no Gazebo GUI), `x`, `y`, `yaw` (initial pose) and `world` (another `.sdf` world).
+The default world is an 8x8 m room with a divider wall and obstacles.
 
-## Cosas que no son evidentes
+## Things that are not obvious
 
-- **`scan_resampler`**: el LD19 real entrega entre ~500 y 504 lecturas por vuelta, y `slam_toolbox` exige un número fijo.
-  El nodo publica `scan` con siempre 500 rayos a partir de `scan_raw`. En simulación no hace falta.
-- **`odom_relay`**: el Create 3 publica `odom` con QoS *best effort* y Nav2 lo pide *reliable*; el nodo lo republica en
-  `odom_reliable`. Solo con el robot real.
-- **`cmd_vel_stamper`**: el `diff_drive_controller` de Jazzy recibe `TwistStamped`, pero el teleop y Nav2 publican
-  `Twist`. Solo en simulación.
-- **`irobot_create_control`**: el URDF oficial lo referencia al usar `gazebo:=ignition`. Solo hace falta en simulación.
-- **El modelo de la Pi incluye el URDF completo del Create 3**, no uno mínimo. El Create 3 también publica sus propios frames:
-  conviene comprobar que no haya transformaciones duplicadas (`ros2 topic echo /r2/tf_static`).
+- **`scan_resampler`**: the real LD19 delivers between ~500 and 504 readings per revolution, and `slam_toolbox` requires a fixed number.
+  The node publishes `scan` with always 500 beams, taken from `scan_raw`. It is not needed in simulation.
+- **`odom_relay`**: the Create 3 publishes `odom` with *best effort* QoS and Nav2 asks for *reliable*; the node republishes it on
+  `odom_reliable`. Real robot only.
+- **`cmd_vel_stamper`**: Jazzy's `diff_drive_controller` receives `TwistStamped`, but the teleop and Nav2 publish
+  `Twist`. Simulation only.
+- **`irobot_create_control`**: the official URDF references it when `gazebo:=ignition` is used. It is only needed in simulation.
+- **The Pi's model includes the full Create 3 URDF**, not a minimal one. The Create 3 also publishes its own frames:
+  check that there are no duplicate transforms (`ros2 topic echo /r2/tf_static`).
 
-## Primera prueba: qué comprobar
+## First run: what to check
 
-Puntos donde es más probable que haga falta ajustar algo:
+Places where something is most likely to need adjusting:
 
-- **Modelo (PC):** `ros2 launch irobot_create_description display.launch.py`. Falta crear `rviz/model.rviz` desde RViz.
-- **Compilación del driver del LD19 y puerto serie:** `ls -l /dev/ldlidar`; si no existe, `lsusb` y revisa el identificador de la regla udev.
-- **El scan sale girado o invertido:** ajusta `laser_yaw` y `laser_scan_dir`.
-- **`slam_toolbox` no se activa:** es un nodo con ciclo de vida; el launch lo configura y activa. Mira `ros2 lifecycle get /r2/slam_toolbox`.
-- **Los `.rviz`** están escritos a mano y sin probar: si algo no se ve, ajústalo en RViz y guarda la configuración.
-- **Simulación:** que los *spawners* no agoten su tiempo de espera al cargar las mallas, que existan `/odom`, `/tf` y
-  `/joint_states`, y que las mallas se encuentren (`GZ_SIM_RESOURCE_PATH`).
+- **Model (PC):** `ros2 launch irobot_create_description display.launch.py`. `rviz/model.rviz` still has to be created from RViz.
+- **LD19 driver build and serial port:** `ls -l /dev/ldlidar`; if it does not exist, run `lsusb` and check the udev rule identifier.
+- **The scan comes out rotated or inverted:** adjust `laser_yaw` and `laser_scan_dir`.
+- **`slam_toolbox` does not activate:** it is a lifecycle node; the launch configures and activates it. Check `ros2 lifecycle get /r2/slam_toolbox`.
+- **The `.rviz` files** are written by hand and untested: if something is not visible, adjust it in RViz and save the configuration.
+- **Simulation:** that the *spawners* do not time out while the meshes load, that `/odom`, `/tf` and
+  `/joint_states` exist, and that the meshes are found (`GZ_SIM_RESOURCE_PATH`).
 
-## Código de terceros y licencias
+## Third-party code and licenses
 
-| Paquete | Origen | Licencia |
+| Package | Origin | License |
 |---|---|---|
-| `irobot_create_description` (URDF y mallas oficiales) | [iRobotEducation/create3_sim](https://github.com/iRobotEducation/create3_sim), rama `jazzy` | BSD-3-Clause |
-| `irobot_create_control` | ídem (copia mínima) | BSD-3-Clause |
-| `ldlidar_stl_ros2` | [ldrobotSensorTeam/ldlidar_stl_ros2](https://github.com/ldrobotSensorTeam/ldlidar_stl_ros2) (con una modificación) | MIT |
+| `irobot_create_description` (official URDF and meshes) | [iRobotEducation/create3_sim](https://github.com/iRobotEducation/create3_sim), branch `jazzy` | BSD-3-Clause |
+| `irobot_create_control` | same (minimal copy) | BSD-3-Clause |
+| `ldlidar_stl_ros2` | [ldrobotSensorTeam/ldlidar_stl_ros2](https://github.com/ldrobotSensorTeam/ldlidar_stl_ros2) (with one modification) | MIT |
 
-El detalle de qué se copió y qué se modificó está en `VENDORED.md` (`ldlidar_stl_ros2`, `irobot_create_control`) y en
-`ATTRIBUTION.md` (`irobot_create_description`). El código propio del proyecto es Apache-2.0.
+The details of what was copied and what was modified are in `VENDORED.md` (`ldlidar_stl_ros2`, `irobot_create_control`) and in
+`ATTRIBUTION.md` (`irobot_create_description`). The project's own code is Apache-2.0.

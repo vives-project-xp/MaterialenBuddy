@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# Abre RViz en esta máquina (tu PC) para ver el robot real que corre en la Pi.
+# Opens RViz on this machine (your PC) to view the real robot running on the Pi.
 #
-# En la Pi lanza antes, sin RViz (la Pi no necesita pantalla):
-#   ros2 launch hrobot_bringup mapping.launch.py lidar_port:=/dev/ldlidar rviz:=false
-#   ros2 launch hrobot_bringup navigation.launch.py map_yaml:=<ruta> lidar_port:=/dev/ldlidar rviz:=false
+# On the Pi, launch first, without RViz (the Pi does not need a display):
+#   ros2 launch mrobot_bringup mapping.launch.py lidar_port:=/dev/ldlidar rviz:=false
+#   ros2 launch mrobot_bringup navigation.launch.py map_yaml:=<path> lidar_port:=/dev/ldlidar rviz:=false
 #
-# Las dos máquinas deben estar en la misma red y usar el mismo ROS_DOMAIN_ID y RMW_IMPLEMENTATION.
+# Both machines must be on the same network and use the same ROS_DOMAIN_ID and RMW_IMPLEMENTATION.
 #
-# Uso:  scripts/rviz_remote.sh [mapping|navigation] [--namespace NS] [--domain ID] [--rmw NOMBRE]
-#   mapping|navigation  configuración de RViz a usar (def: mapping)
-#   --namespace         namespace del robot (def: $CREATE3_ROBOT_NAMESPACE si existe, si no r2; vacío = ninguno)
-#   --domain            ROS_DOMAIN_ID (def: el que ya tengas exportado; debe coincidir con el de la Pi)
-#   --rmw               RMW_IMPLEMENTATION (def: el que ya tengas exportado; debe coincidir con el de la Pi)
+# Usage:  scripts/rviz_remote.sh [mapping|navigation] [--namespace NS] [--domain ID] [--rmw NAME]
+#   mapping|navigation  RViz configuration to use (default: mapping)
+#   --namespace         robot namespace (default: $CREATE3_ROBOT_NAMESPACE if set, otherwise r2; empty = none)
+#   --domain            ROS_DOMAIN_ID (default: the one you already exported; it must match the Pi's)
+#   --rmw               RMW_IMPLEMENTATION (default: the one you already exported; it must match the Pi's)
 
 set -euo pipefail
 
@@ -30,22 +30,22 @@ while [ $# -gt 0 ]; do
   arg="$1"; shift
   case "$arg" in
     mapping|navigation) CONFIG="${arg}" ;;
-    --namespace) [ $# -gt 0 ] || die "--namespace necesita un valor (usa '' para ninguno)"; NAMESPACE="$1"; shift ;;
-    --domain) [ $# -gt 0 ] || die "--domain necesita un valor"; export ROS_DOMAIN_ID="$1"; shift ;;
-    --rmw) [ $# -gt 0 ] || die "--rmw necesita un valor"; export RMW_IMPLEMENTATION="$1"; shift ;;
+    --namespace) [ $# -gt 0 ] || die "--namespace needs a value (use '' for none)"; NAMESPACE="$1"; shift ;;
+    --domain) [ $# -gt 0 ] || die "--domain needs a value"; export ROS_DOMAIN_ID="$1"; shift ;;
+    --rmw) [ $# -gt 0 ] || die "--rmw needs a value"; export RMW_IMPLEMENTATION="$1"; shift ;;
     -h|--help) usage; exit 0 ;;
-    *) die "argumento desconocido: ${arg} (usa --help)" ;;
+    *) die "unknown argument: ${arg} (use --help)" ;;
   esac
 done
 
 NAMESPACE="${NAMESPACE#/}"; NAMESPACE="${NAMESPACE%/}"
 
-SRC_RVIZ="${WS_ROOT}/src/hrobot_bringup/rviz/${CONFIG}.rviz"
-[ -f "${SRC_RVIZ}" ] || die "no existe ${SRC_RVIZ}"
+SRC_RVIZ="${WS_ROOT}/src/mrobot_bringup/rviz/${CONFIG}.rviz"
+[ -f "${SRC_RVIZ}" ] || die "${SRC_RVIZ} does not exist"
 
-# set -u rompe con los setup.bash de ROS; se desactiva solo mientras se cargan.
+# set -u breaks with ROS's setup.bash files; it is only disabled while they are sourced.
 set +u
-[ -f /opt/ros/jazzy/setup.bash ] || die "no encuentro /opt/ros/jazzy/setup.bash"
+[ -f /opt/ros/jazzy/setup.bash ] || die "cannot find /opt/ros/jazzy/setup.bash"
 # shellcheck disable=SC1091
 source /opt/ros/jazzy/setup.bash
 if [ -f "${WS_ROOT}/install/setup.bash" ]; then
@@ -54,10 +54,10 @@ if [ -f "${WS_ROOT}/install/setup.bash" ]; then
 fi
 set -u
 
-command -v rviz2 >/dev/null || die "rviz2 no está instalado (sudo apt install ros-jazzy-rviz2)"
+command -v rviz2 >/dev/null || die "rviz2 is not installed (sudo apt install ros-jazzy-rviz2)"
 
-# El .rviz usa el marcador /<robot_namespace>; el launch lo sustituye, aquí lo hacemos con sed.
-# Carpeta temporal portable (mktemp --suffix solo existe en GNU).
+# The .rviz uses the /<robot_namespace> marker; the launch file replaces it, here we do it with sed.
+# Portable temporary folder (mktemp --suffix only exists in GNU).
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "${TMP_DIR}"' EXIT
 TMP_RVIZ="${TMP_DIR}/${CONFIG}.rviz"
@@ -69,6 +69,6 @@ else
   REMAPS=()
 fi
 
-echo "RViz: config=${CONFIG} namespace='${NAMESPACE}' ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0} RMW=${RMW_IMPLEMENTATION:-por defecto}"
-# ${REMAPS[@]+...} evita el error de 'unbound variable' con el array vacío en bash antiguo.
+echo "RViz: config=${CONFIG} namespace='${NAMESPACE}' ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0} RMW=${RMW_IMPLEMENTATION:-default}"
+# ${REMAPS[@]+...} avoids the 'unbound variable' error with the empty array in old bash.
 rviz2 -d "${TMP_RVIZ}" --ros-args ${REMAPS[@]+"${REMAPS[@]}"}

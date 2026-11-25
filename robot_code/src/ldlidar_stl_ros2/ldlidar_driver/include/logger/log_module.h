@@ -37,7 +37,7 @@
 #ifndef LINUX
 #include <windows.h>
 #else
-#include <pthread.h>  // MODIFICADO respecto al original: estaba comentado y falla con GCC de Ubuntu 24.04
+#include <pthread.h>  // MODIFIED from the original: it was commented out, and the build fails with Ubuntu 24.04's GCC
 #include <stdarg.h>
 #define printf_s(fileptr,str)  (fprintf(fileptr,"%s",str))
 #define __in

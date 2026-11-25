@@ -1,6 +1,6 @@
-# Configuración mínima de RViz para navegar con Nav2. '/<robot_namespace>' se sustituye por '/r2' (o por nada).
-# Escrita a mano y sin probar: si algo no se ve, ajústalo en RViz y guarda con File > Save Config.
-# Herramientas: "2D Pose Estimate" (pose inicial de AMCL) y "2D Goal Pose" (meta de navegación).
+# Minimal RViz configuration for navigating with Nav2. '/<robot_namespace>' is replaced by '/r2' (or by nothing).
+# Written by hand and untested: if something is not visible, adjust it in RViz and save with File > Save Config.
+# Tools: "2D Pose Estimate" (AMCL initial pose) and "2D Goal Pose" (navigation goal).
 Panels:
   - Class: rviz_common/Displays
     Name: Displays
@@ -11,7 +11,7 @@ Visualization Manager:
       Name: Grid
       Enabled: true
     - Class: rviz_default_plugins/Map
-      Name: Mapa
+      Name: Map
       Enabled: true
       Alpha: 0.7
       Topic:
@@ -21,7 +21,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
     - Class: rviz_default_plugins/Map
-      Name: Costmap global
+      Name: Global costmap
       Enabled: true
       Alpha: 0.4
       Color Scheme: costmap
@@ -32,7 +32,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
     - Class: rviz_default_plugins/Map
-      Name: Costmap local
+      Name: Local costmap
       Enabled: true
       Alpha: 0.6
       Color Scheme: costmap
@@ -43,7 +43,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
     - Class: rviz_default_plugins/Path
-      Name: Ruta global
+      Name: Global path
       Enabled: true
       Color: 0; 200; 0
       Topic:
@@ -65,7 +65,7 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Best Effort
     - Class: nav2_rviz_plugins/ParticleCloud
-      Name: Partículas AMCL
+      Name: AMCL particles
       Enabled: true
       Topic:
         Value: /<robot_namespace>/particle_cloud

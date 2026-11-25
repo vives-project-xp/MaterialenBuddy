@@ -1,17 +1,17 @@
-"""Base de hardware: robot_state_publisher (xacro) + driver del LiDAR LD19 + scan_resampler.
+"""Hardware base: robot_state_publisher (xacro) + LD19 LiDAR driver + scan_resampler.
 
-NOTA: el Create 3 NO se lanza aquí. Corre su propio firmware y se alcanza por red (Wi-Fi o Ethernet sobre
-USB). La Raspberry Pi 5 debe usar el mismo ROS_DOMAIN_ID y RMW que el Create 3 (se configura en su web:
-Application > ROS 2). El Create 3 vive en el namespace /r2; los nodos de este launch se ponen bajo el mismo
-`robot_namespace` y TF se remapea a <ns>/tf y <ns>/tf_static. El namespace se aplica aquí UNA vez (ver
-hrobot_namespace.py): no envuelvas este launch en otro namespace.
+NOTE: the iRobot Create 3 is NOT launched here. It runs its own firmware and is reached over the network
+(Wi-Fi or Ethernet over USB). The Raspberry Pi 5 must use the same ROS_DOMAIN_ID and RMW as the Create 3
+(configured in its web UI: Application > ROS 2). The Create 3 lives in the /r2 namespace; the nodes of this
+launch are put under the same `robot_namespace` and TF is remapped to <ns>/tf and <ns>/tf_static. The
+namespace is applied here ONCE (see mrobot_namespace.py): do not wrap this launch in another namespace.
 
-Driver del LD19: `ldlidar_stl_ros2` de LDRobot (ejecutable `ldlidar_stl_ros2_node`). Se compila desde el
-código fuente en el workspace; no está disponible por rosdep.
+LD19 driver: LDRobot's `ldlidar_stl_ros2` (executable `ldlidar_stl_ros2_node`). It is built from source in
+the workspace (it is included in src/ldlidar_stl_ros2); it is not available through rosdep.
 
-Uso:
-    ros2 launch hrobot_bringup hardware_base.launch.py
-    ros2 launch hrobot_bringup hardware_base.launch.py laser_yaw:=-1.5707963 lidar_port:=/dev/ldlidar
+Usage:
+    ros2 launch mrobot_bringup hardware_base.launch.py
+    ros2 launch mrobot_bringup hardware_base.launch.py laser_yaw:=-1.5707963 lidar_port:=/dev/ldlidar
 """
 
 import os
@@ -24,9 +24,9 @@ from launch.substitutions import Command, FindExecutable, LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
-# hrobot_namespace.py es un módulo normal que vive junto a este launch.
+# mrobot_namespace.py is a plain module that lives next to this launch file.
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
-from hrobot_namespace import (  # noqa: E402
+from mrobot_namespace import (  # noqa: E402
     namespaced,
     resolve_namespace,
     robot_namespace_argument,
@@ -47,7 +47,7 @@ def _setup(context, *args, **kwargs):
     robot_description = ParameterValue(Command([FindExecutable(
         name="xacro"), " ", xacro_file, " laser_yaw:=", laser_yaw]), value_type=str)
 
-    # Único nodo que usa TF: el resto no necesita remapearlo.
+    # The only node that uses TF: the rest do not need the remap.
     robot_state_publisher = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
@@ -58,8 +58,8 @@ def _setup(context, *args, **kwargs):
         remappings=tf_remappings(namespace),
     )
 
-    # Driver del LD19: publica LaserScan en `scan_raw` (frame laser_frame, definido en el xacro).
-    # LaunchConfiguration da str, por eso baudrate y scan_dir se convierten con ParameterValue.
+    # LD19 driver: publishes LaserScan on `scan_raw` (frame laser_frame, defined in the xacro).
+    # LaunchConfiguration yields a str, so baudrate and scan_dir are converted with ParameterValue.
     ldlidar = Node(
         package="ldlidar_stl_ros2",
         executable="ldlidar_stl_ros2_node",
@@ -80,9 +80,9 @@ def _setup(context, *args, **kwargs):
         ],
     )
 
-    # scan_raw (500-504 rayos variables) -> scan (num_beams fijo), que es lo que exige slam_toolbox.
+    # scan_raw (500-504 variable beams) -> scan (fixed num_beams), which is what slam_toolbox requires.
     scan_resampler = Node(
-        package="hrobot_bringup",
+        package="mrobot_bringup",
         executable="scan_resampler.py",
         name="scan_resampler",
         output="screen",
@@ -90,9 +90,9 @@ def _setup(context, *args, **kwargs):
                      "output_topic": "scan", "num_beams": 500}],
     )
 
-    # odom (BEST_EFFORT, del Create 3) -> odom_reliable (RELIABLE). Solo lo consume Nav2 (paso 4).
+    # odom (BEST_EFFORT, from the Create 3) -> odom_reliable (RELIABLE). Only consumed by Nav2.
     odom_relay = Node(
-        package="hrobot_bringup",
+        package="mrobot_bringup",
         executable="odom_relay.py",
         name="odom_relay",
         output="screen",
@@ -110,18 +110,18 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "lidar_port",
                 default_value="/dev/ttyUSB0",
-                description="Puerto serie del LD19 (conviene un enlace udev, p. ej. /dev/ldlidar).",
+                description="LD19 serial port (a udev symlink is recommended, e.g. /dev/ldlidar).",
             ),
             DeclareLaunchArgument("lidar_baudrate", default_value="230400"),
             DeclareLaunchArgument(
                 "laser_scan_dir",
                 default_value="true",
-                description="Sentido de giro del LD19 (true|false). Cámbialo si el scan gira al revés que el robot.",
+                description="LD19 scan direction (true|false). Flip it if the scan turns opposite to the robot.",
             ),
             DeclareLaunchArgument(
                 "laser_yaw",
                 default_value="0.0",
-                description="Giro del LD19 respecto al frente del robot (rad). Con el sensor real se usó -1.5707963.",
+                description="LD19 rotation relative to the robot front (rad). -1.5707963 was used with the real sensor.",
             ),
             OpaqueFunction(function=_setup),
         ]
