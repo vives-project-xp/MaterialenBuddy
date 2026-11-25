@@ -5,6 +5,9 @@
   <version>0.0.0</version>
   <description>Descripción del robot</description>
   <maintainer email="tu_correo@ejemplo.com">Brandon</maintainer>
+  <!-- BSD-3-Clause: URDF/XACRO y mallas oficiales de iRobot (ver LICENSE y ATTRIBUTION.md).
+       Apache-2.0: archivos propios (create3_ld19, lidar_ld19, launch y rviz). -->
+  <license>BSD-3-Clause</license>
   <license>Apache-2.0</license>
 
   <!-- Herramienta con la que se compila el paquete (ament_cmake) -->
