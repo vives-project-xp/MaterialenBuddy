@@ -94,12 +94,12 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/r2/
 When the map is complete, save it (with `mapping.launch.py` still running):
 
 ```bash
-scripts/save_map.sh map1                           # on the machine where slam_toolbox runs
-scripts/save_map.sh map1 --pull user@pi-host       # if you run it from another machine
+scripts/save_map.sh map_name                      # on the machine where slam_toolbox runs
+scripts/save_map.sh map_name --pull user@pi-host  # if you run it from another machine
 ```
 
-This generates four files in `maps/`: `map1.yaml` and `map1.pgm` (the image, for navigating) and `map1.posegraph` and
-`map1.data` (the slam_toolbox pose graph). They are local files: they are not pushed to the repository.
+This generates four files in `maps/`: `map_name.yaml` and `map_name.pgm` (the image, for navigating) and `map_name.posegraph` and
+`map_name.data` (the slam_toolbox pose graph). They are local files: they are not pushed to the repository.
 
 ### 2. Navigate
 
@@ -117,7 +117,7 @@ arguments or `set_initial_pose:=false` and use **2D Pose Estimate** in RViz.
 ### Useful arguments
 
 | Argument | Where | What for |
-|---|---|---|
+| --- | --- | --- |
 | `lidar_port` | mapping, navigation | LD19 port (`/dev/ldlidar` with the udev rule; `/dev/ttyUSB0` without it) |
 | `laser_scan_dir` | mapping, navigation | LD19 scan direction: flip it if the scan comes out inverted |
 | `laser_yaw` | mapping, navigation | Sensor rotation relative to the robot front (rad). `-1.5707963` was used with the real sensor |
@@ -167,7 +167,7 @@ Places where something is most likely to need adjusting:
 ## Third-party code and licenses
 
 | Package | Origin | License |
-|---|---|---|
+| --- | --- | --- |
 | `irobot_create_description` (official URDF and meshes) | [iRobotEducation/create3_sim](https://github.com/iRobotEducation/create3_sim), branch `jazzy` | BSD-3-Clause |
 | `irobot_create_control` | same (minimal copy) | BSD-3-Clause |
 | `ldlidar_stl_ros2` | [ldrobotSensorTeam/ldlidar_stl_ros2](https://github.com/ldrobotSensorTeam/ldlidar_stl_ros2) (with one modification) | MIT |
