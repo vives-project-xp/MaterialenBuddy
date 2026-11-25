@@ -1,0 +1,31 @@
+# Solo se versiona src/ (y este .gitignore); todo lo demás queda local
+/*
+!/src/
+!/.gitignore
+
+# colcon / ROS 2
+build/
+install/
+log/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Secretos
+.env
+*.pem
+.cache/
+*.swp
+compile_commands.json
+src/ldlidar_stl_ros2/
+__pycache__/
+*.pyc
+
+# Mapas guardados (solo se versiona la carpeta)
+maps/*
+!maps/.gitkeep
+
+# Notas de contexto locales
+CONTEXTO.md

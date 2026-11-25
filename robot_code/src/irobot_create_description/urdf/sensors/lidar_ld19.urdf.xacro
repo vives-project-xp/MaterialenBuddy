@@ -1,0 +1,108 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- Características del LiDAR LDRobot LD19 (STL-19P / D500), según el datasheet v1.0 -->
+  <!-- Dimensiones (m / kg). Largo x ancho x alto de la carcasa: 54.00 x 46.29 x 35.0 mm -->
+  <xacro:property name="ld19_length" value="0.054"/>
+  <xacro:property name="ld19_width" value="0.04629"/>
+  <xacro:property name="ld19_total_height" value="0.035"/>
+  <xacro:property name="ld19_dome_radius" value="0.017645"/>  <!-- cúpula giratoria: diámetro 35.29 mm -->
+  <xacro:property name="ld19_dome_height" value="0.0128"/>
+  <xacro:property name="ld19_body_height" value="${ld19_total_height - ld19_dome_height}"/>  <!-- base fija -->
+  <!-- Plano de escaneo: 7.8 mm por debajo de la parte superior. El frame del láser va en ese plano. -->
+  <xacro:property name="ld19_scan_z_from_base" value="${ld19_total_height - 0.0078}"/>
+  <xacro:property name="ld19_mass" value="0.045"/>  <!-- sin cable -->
+
+  <!-- Escaneo -->
+  <xacro:property name="ld19_range_min" value="0.03"/>          <!-- m -->
+  <xacro:property name="ld19_range_max" value="12.0"/>          <!-- m (blanco 80%; con negro 4%: 8 m) -->
+  <xacro:property name="ld19_fov" value="${2 * pi}"/>           <!-- rad: 360° -->
+  <xacro:property name="ld19_samples" value="500"/>             <!-- 360° / 0.72° por vuelta a 10 Hz -->
+  <xacro:property name="ld19_update_rate" value="10"/>          <!-- Hz (rango 6-13) -->
+  <xacro:property name="ld19_noise_stddev" value="0.015"/>      <!-- m: STD 15 mm entre 2 y 12 m -->
+
+  <!-- Nota del datasheet: el frente del sensor es el eje X (ángulo 0), pero el ángulo crece en
+       sentido horario (regla de la mano izquierda); ROS lo usa antihorario. Lo corrige el driver. -->
+
+  <!-- Macro del LiDAR. Se usa así:
+       <xacro:lidar_ld19 gazebo="$(arg gazebo)" parent="base_link">
+         <origin xyz="0 0 0.12" rpy="0 0 0"/>
+       </xacro:lidar_ld19>
+       gazebo:=none (por defecto) = solo el modelo (robot real); "ignition" añade el sensor gpu_lidar. -->
+  <xacro:macro name="lidar_ld19" params="name:=laser parent:=base_link gazebo:=none visualize:=false *origin">
+
+    <!-- Frame del láser: origen en el centro del plano de escaneo, +X = frente del sensor -->
+    <link name="${name}_frame">
+      <!-- Base fija -->
+      <visual>
+        <origin xyz="0 0 ${ld19_body_height / 2 - ld19_scan_z_from_base}"/>
+        <geometry>
+          <box size="${ld19_length} ${ld19_width} ${ld19_body_height}"/>
+        </geometry>
+        <material name="ld19_black">
+          <color rgba="0.1 0.1 0.1 1.0"/>
+        </material>
+      </visual>
+      <!-- Cúpula giratoria -->
+      <visual>
+        <origin xyz="0 0 ${ld19_body_height + ld19_dome_height / 2 - ld19_scan_z_from_base}"/>
+        <geometry>
+          <cylinder radius="${ld19_dome_radius}" length="${ld19_dome_height}"/>
+        </geometry>
+        <material name="ld19_black"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 ${ld19_total_height / 2 - ld19_scan_z_from_base}"/>
+        <geometry>
+          <box size="${ld19_length} ${ld19_width} ${ld19_total_height}"/>
+        </geometry>
+      </collision>
+      <xacro:inertial_cuboid_with_pose mass="${ld19_mass}" x="${ld19_length}" y="${ld19_width}" z="${ld19_total_height}">
+        <origin xyz="0 0 ${ld19_total_height / 2 - ld19_scan_z_from_base}"/>
+      </xacro:inertial_cuboid_with_pose>
+    </link>
+
+    <joint name="${name}_joint" type="fixed">
+      <xacro:insert_block name="origin"/>
+      <parent link="${parent}"/>
+      <child link="${name}_frame"/>
+    </joint>
+
+    <!-- Simulación (Gazebo Harmonic): LiDAR de GPU con las características del LD19 -->
+    <xacro:if value="${gazebo == 'ignition'}">
+      <gazebo reference="${name}_frame">
+        <sensor name="${name}" type="gpu_lidar">
+          <topic>scan</topic>
+          <gz_frame_id>${name}_frame</gz_frame_id>
+          <update_rate>${ld19_update_rate}</update_rate>
+          <visualize>${visualize}</visualize>
+          <always_on>true</always_on>
+          <lidar>
+            <scan>
+              <horizontal>
+                <samples>${ld19_samples}</samples>
+                <resolution>1</resolution>
+                <min_angle>${-ld19_fov / 2}</min_angle>
+                <max_angle>${ld19_fov / 2}</max_angle>
+              </horizontal>
+            </scan>
+            <range>
+              <min>${ld19_range_min}</min>
+              <max>${ld19_range_max}</max>
+              <resolution>0.001</resolution>
+            </range>
+            <noise>
+              <type>gaussian</type>
+              <mean>0.0</mean>
+              <stddev>${ld19_noise_stddev}</stddev>
+            </noise>
+          </lidar>
+        </sensor>
+      </gazebo>
+      <gazebo reference="${name}_joint">
+        <preserveFixedJoint>true</preserveFixedJoint>
+      </gazebo>
+    </xacro:if>
+
+  </xacro:macro>
+</robot>
