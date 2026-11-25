@@ -295,11 +295,7 @@
     <gazebo>
       <plugin filename="libgz-sim-contact-system.so" name="gz::sim::systems::Contact"></plugin>
     </gazebo>
-
-    <gazebo>
-      <plugin filename="libgz-sim-sensors-system.so" name="gz::sim::systems::Sensors">
-        <render_engine>ogre2</render_engine>
-      </plugin>
-    </gazebo>
+    <!-- The Sensors system is loaded in the world (room.sdf). Loading it here too creates two
+         render threads and Ogre2 crashes with "material datablock ... already exists". -->
   </xacro:if>
 </robot>
