@@ -49,3 +49,21 @@ For task distribution and to keep track of who is responsible for each task, the
 - making a manual for users authentik
 - Further develop the robot's mapping system. 
 - Research and test the ladar camera on the robot
+
+
+## SCRUM Meeting 4
+
+**Date:** 26/11/2026
+
+### Ready for Test
+
+- Continue testing Authentik and integrate it into a website.
+
+### To Do
+
+- testing communication from website to robot
+- making a manual for users authentik
+- Further develop the robot's mapping system. 
+- Research and test the ladar camera on the robot
+- putting the website and the databases on the VM
+- cleaning the github
