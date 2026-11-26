@@ -38,13 +38,40 @@ because the official URDFs reference it.
   Nav2. The Pi and the Create 3 must use the same `ROS_DOMAIN_ID` and the same RMW.
 - **RViz** is best opened on your PC (`scripts/rviz_remote.sh`), not on the Pi.
 
-The whole stack hangs from the robot namespace (`/r2/scan`, `/r2/map`...). It is changed with the
-`robot_namespace:=` argument or the `CREATE3_ROBOT_NAMESPACE` environment variable. The simulation runs **without a namespace**.
+All topics of the real robot are grouped under its [namespace](#robot-namespace) (`/r2/scan`, `/r2/map`...).
+The simulation runs **without a namespace**.
 
 ## Requirements
 
 - Ubuntu with **ROS 2 Jazzy**, `git`, `colcon` and `rosdep`.
 - For the simulation (on a PC): see [Simulation](#simulation-on-a-pc).
+
+## Robot namespace
+
+The namespace is the prefix of the robot's topics. With the namespace `r2`, the odometry topic is `/r2/odom`.
+It is configured **on the Create 3**, in its web interface, and is typically `r` followed by a number.
+
+**This project must use the same namespace as the robot.** This README and the code use `r2` by default.
+If your robot uses `r2`, there is nothing to change.
+
+If it uses another one, for example `r3`, set it **on both the Raspberry Pi and your PC**:
+
+```bash
+echo 'export CREATE3_ROBOT_NAMESPACE=r3' >> ~/.bashrc
+source ~/.bashrc
+```
+
+The launch files and the scripts read this variable. Write the name without slashes. To override it only once:
+
+| Command | Option |
+| --- | --- |
+| `ros2 launch mrobot_bringup ...` | `robot_namespace:=r3` |
+| `scripts/save_map.sh`, `scripts/rviz_remote.sh` | `--namespace r3` |
+
+Commands that you type with a topic or node name, such as `/r2/cmd_vel`, do **not** change automatically:
+replace `r2` with your namespace.
+
+If the robot has no namespace, use an empty value (`export CREATE3_ROBOT_NAMESPACE=''`) and remove `/r2` from those commands.
 
 ## Installation on the Raspberry Pi
 
@@ -60,11 +87,25 @@ source install/setup.bash
 `--rmw NAME` (see `scripts/setup_pi.sh --help`).
 
 After `setup_pi.sh`, log out and back in (`dialout` group), and configure the **same RMW and domain on the Create 3**
-(its web UI, *Application > ROS 2*). Restart its application after changing them. To check the connection:
+(its web UI, *Application > ROS 2*). Restart its application after changing them.
+
+### Check the connection
+
+With the robot turned on, run this on the Pi:
 
 ```bash
-ros2 topic list | grep -E '/r2/(odom|cmd_vel)'
+ros2 topic list | grep -E '/(odom|cmd_vel)$'
 ```
+
+With the namespace `r2`, the output includes:
+
+```text
+/r2/cmd_vel
+/r2/odom
+```
+
+The part before `/odom` is your robot's namespace. If it is not `r2`, see [Robot namespace](#robot-namespace).
+If nothing is listed, check that the robot and the Pi are on the same network and use the same `ROS_DOMAIN_ID` and RMW.
 
 ## Choosing the LiDAR
 
@@ -208,7 +249,7 @@ scripts/save_map.sh map2
 | `lidar_model` | all launches, simulation | LiDAR profile: `ld19` or `rplidar_c1` (default: `LIDAR_MODEL` or `ld19`) |
 | `lidar_port` | mapping, navigation | Serial port, if it is not `/dev/lidar` (e.g. `/dev/ttyUSB0`) |
 | `laser_yaw` | mapping, navigation | Overrides the profile rotation (rad). `-1.5707963` was used with the real LD19 |
-| `robot_namespace` | all | Robot namespace (default `r2`; empty = none) |
+| `robot_namespace` | real robot | [Robot namespace](#robot-namespace) (default: `CREATE3_ROBOT_NAMESPACE` or `r2`; empty = none) |
 | `rviz` | all | `false` to not open RViz (on the Pi) |
 | `live_mapping` | navigation | `true` (default): [live map](#live-map); `false`: [fixed map](#fixed-map) |
 | `map_yaml` | navigation | Absolute path to the map `.yaml` (required) |
