@@ -9,6 +9,22 @@ The robot does three things:
 2. **Navigates** autonomously with Nav2, on a fixed map (AMCL) or a live one (`slam_toolbox`). Goals are given from RViz.
 3. It is **simulated** first in Gazebo Harmonic.
 
+## Choose your setup
+
+There are two ways to run this project. Follow **only** the guide for yours:
+**[Real robot](#real-robot)** or **[Simulation](#simulation-on-a-pc)**. Their configuration and commands are different.
+
+| Setting | Real robot | Simulation |
+| --- | --- | --- |
+| Hardware | Create 3, Raspberry Pi 5, 2D LiDAR and a PC | Only a PC |
+| Where the code runs | Raspberry Pi (RViz and the scripts that open it: PC) | PC |
+| Packages to build | `--packages-up-to mrobot_bringup` (includes the LiDAR drivers) | `--packages-select` with 4 packages (no LiDAR drivers) |
+| Robot namespace | `r2` by default; it must match the Create 3 | None |
+| ROS network | Same `ROS_DOMAIN_ID` and RMW on the Create 3, the Pi and the PC | Nothing to match with a robot |
+| LiDAR (`lidar_model`) | The sensor you have connected | The profile to simulate |
+| Launch files | `mrobot_bringup`: `mapping.launch.py`, `navigation.launch.py` | `mrobot_simulation`: `sim.launch.py` |
+| Clock (`use_sim_time`) | `false` (default) | `true` (set by `sim.launch.py`) |
+
 ## Structure
 
 ```text
@@ -38,15 +54,22 @@ because the official URDFs reference it.
   Nav2. The Pi and the Create 3 must use the same `ROS_DOMAIN_ID` and the same RMW.
 - **RViz** is best opened on your PC (`scripts/rviz_remote.sh`), not on the Pi.
 
-All topics of the real robot are grouped under its [namespace](#robot-namespace) (`/r2/scan`, `/r2/map`...).
+All topics of the real robot are grouped under its [namespace](#1-robot-namespace) (`/r2/scan`, `/r2/map`...).
 The simulation runs **without a namespace**.
 
-## Requirements
+## Real robot
 
-- Ubuntu with **ROS 2 Jazzy**, `git`, `colcon` and `rosdep`.
-- For the simulation (on a PC): see [Simulation](#simulation-on-a-pc).
+Follow these steps in order. Steps 1 to 5 are the configuration; steps 6 and 7 are the daily use.
 
-## Robot namespace
+| Configure | Where | Step |
+| --- | --- | --- |
+| Robot namespace | Create 3; Pi and PC if it is not `r2` | [1](#1-robot-namespace) |
+| ROS network, serial port and build | Pi (and the same network settings on the Create 3) | [2](#2-set-up-the-raspberry-pi) |
+| ROS tools and network settings | PC | [3](#3-set-up-your-pc) |
+| Connection test | Pi | [4](#4-check-the-connection) |
+| LiDAR model | Pi | [5](#5-choose-the-lidar) |
+
+### 1. Robot namespace
 
 The namespace is the prefix of the robot's topics. With the namespace `r2`, the odometry topic is `/r2/odom`.
 It is configured **on the Create 3**, in its web interface, and is typically `r` followed by a number.
@@ -73,7 +96,9 @@ replace `r2` with your namespace.
 
 If the robot has no namespace, use an empty value (`export CREATE3_ROBOT_NAMESPACE=''`) and remove `/r2` from those commands.
 
-## Installation on the Raspberry Pi
+### 2. Set up the Raspberry Pi
+
+**On the Pi.** It needs Ubuntu with **ROS 2 Jazzy**, `git`, `colcon` and `rosdep` already installed.
 
 ```bash
 cd robot_code
@@ -89,7 +114,27 @@ source install/setup.bash
 After `setup_pi.sh`, log out and back in (`dialout` group), and configure the **same RMW and domain on the Create 3**
 (its web UI, *Application > ROS 2*). Restart its application after changing them.
 
-### Check the connection
+### 3. Set up your PC
+
+You need ROS 2 Jazzy on your PC to see the map, send goals and drive the robot:
+
+```bash
+sudo apt install ros-jazzy-rviz2 ros-jazzy-nav2-rviz-plugins ros-jazzy-teleop-twist-keyboard
+```
+
+The PC must be on the same network as the robot and use the same `ROS_DOMAIN_ID` and RMW as the Pi. `setup_pi.sh`
+only configures the Pi, so set them on the PC too. This example uses the script's defaults (domain `0`, Fast DDS);
+use your own values if they differ:
+
+```bash
+export ROS_DOMAIN_ID=0
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+```
+
+Add these lines to `~/.bashrc` to keep them. If your namespace is not `r2`, set
+[`CREATE3_ROBOT_NAMESPACE`](#1-robot-namespace) on the PC as well.
+
+### 4. Check the connection
 
 With the robot turned on, run this on the Pi:
 
@@ -104,10 +149,10 @@ With the namespace `r2`, the output includes:
 /r2/odom
 ```
 
-The part before `/odom` is your robot's namespace. If it is not `r2`, see [Robot namespace](#robot-namespace).
+The part before `/odom` is your robot's namespace. If it is not `r2`, see [Robot namespace](#1-robot-namespace).
 If nothing is listed, check that the robot and the Pi are on the same network and use the same `ROS_DOMAIN_ID` and RMW.
 
-## Choosing the LiDAR
+### 5. Choose the LiDAR
 
 | `lidar_model` | Sensor | Driver |
 | --- | --- | --- |
@@ -132,9 +177,7 @@ front (cable to the back). Check it in RViz with an object in front of the robot
 rebuild. The driver must publish a `LaserScan` with a positive `angle_increment`. Nav2 costmap ranges stay in
 `nav2_params.yaml`: lower them for a shorter-range sensor.
 
-## Using the real robot
-
-### 1. Map
+### 6. Map
 
 On the Pi:
 
@@ -164,7 +207,7 @@ scripts/save_map.sh map_name --pull user@pi-host  # if you run it from another m
 This generates four files in `maps/`: `map_name.yaml` and `map_name.pgm` (the image, for navigating) and `map_name.posegraph` and
 `map_name.data` (the slam_toolbox pose graph). They are local files: they are not pushed to the repository.
 
-### 2. Navigate
+### 7. Navigate
 
 There are two modes, selected with `live_mapping`. In both, the goal is given with RViz's **2D Goal Pose** tool.
 
@@ -242,14 +285,14 @@ original is preserved:
 scripts/save_map.sh map2
 ```
 
-### Useful arguments
+### Launch arguments
 
 | Argument | Where | What for |
 | --- | --- | --- |
 | `lidar_model` | all launches, simulation | LiDAR profile: `ld19` or `rplidar_c1` (default: `LIDAR_MODEL` or `ld19`) |
 | `lidar_port` | mapping, navigation | Serial port, if it is not `/dev/lidar` (e.g. `/dev/ttyUSB0`) |
 | `laser_yaw` | mapping, navigation | Overrides the profile rotation (rad). `-1.5707963` was used with the real LD19 |
-| `robot_namespace` | real robot | [Robot namespace](#robot-namespace) (default: `CREATE3_ROBOT_NAMESPACE` or `r2`; empty = none) |
+| `robot_namespace` | real robot | [Robot namespace](#1-robot-namespace) (default: `CREATE3_ROBOT_NAMESPACE` or `r2`; empty = none) |
 | `rviz` | all | `false` to not open RViz (on the Pi) |
 | `live_mapping` | navigation | `true` (default): [live map](#live-map); `false`: [fixed map](#fixed-map) |
 | `map_yaml` | navigation | Absolute path to the map `.yaml` (required) |
@@ -257,6 +300,14 @@ scripts/save_map.sh map2
 ## Simulation (on a PC)
 
 No Create 3, Raspberry Pi or physical LiDAR is needed: both the robot and the LiDAR are simulated.
+
+### Simulation configuration
+
+- **Namespace:** none. `sim.launch.py` sets this itself, but `save_map.sh` needs `--namespace ''`.
+- **ROS network:** if a real robot is on the same network, use a `ROS_DOMAIN_ID` that the robot does not use, in every
+  simulation terminal (for example `export ROS_DOMAIN_ID=42`), to keep both apart.
+- **LiDAR:** `ld19` by default. `lidar_model:=rplidar_c1` or `LIDAR_MODEL` selects the other simulated profile.
+- **Not needed:** `setup_pi.sh`, `rviz_remote.sh` and the LiDAR drivers. RViz opens with the simulation.
 
 ### Required software
 
@@ -317,7 +368,7 @@ source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ```
 
-Map the world:
+#### Map the world
 
 ```bash
 ros2 launch mrobot_simulation sim.launch.py                              # map
@@ -325,11 +376,19 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard                     # in an
 scripts/save_map.sh room --namespace ''                                  # in a third one; the simulation does not use a namespace
 ```
 
-Then close the mapping simulation and navigate on the saved map:
+#### Navigate in the simulation
+
+Close the mapping simulation first. As on the real robot, there are two [navigation modes](#7-navigate):
 
 ```bash
+# Live map (default)
 ros2 launch mrobot_simulation sim.launch.py nav:=true map_yaml:=$PWD/maps/room.yaml
+# Fixed map (AMCL)
+ros2 launch mrobot_simulation sim.launch.py nav:=true map_yaml:=$PWD/maps/room.yaml live_mapping:=false
 ```
+
+Send the goal with RViz's **2D Goal Pose** tool. The initial pose is the spawn pose (`x`, `y`, `yaw`), so use the same
+starting point as when you made the map.
 
 Other arguments: `headless:=true` (no Gazebo GUI), `x`, `y`, `yaw` (initial pose) and `world` (another `.sdf` world).
 The default world is an 8x8 m room with a divider wall and obstacles.
