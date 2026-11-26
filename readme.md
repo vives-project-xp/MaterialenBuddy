@@ -21,3 +21,6 @@ The goal of this project is to develop an autonomous robot that can transport ma
 - [Research](./research/readme.md) covers the website, robot, integration, and Docker research.
 - [media](./media/readme.md) : This contains everything from posters to Instagram posts.
 - [website](./website/readme.md): This constains everything for the website. 
+- [scrum](./SCRUM/SCRUM.md): This contains the planning of ervery week.
+- [robot_code](./robot_code/README.md): This contains every code for the robot. 
+- [documentation](./documentation/Readme.md): This contains everything of documentation from the project 
