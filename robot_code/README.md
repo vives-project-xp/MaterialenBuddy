@@ -16,7 +16,7 @@ There are two ways to run this project. Follow **only** the guide for yours:
 
 | Setting | Real robot | Simulation |
 | --- | --- | --- |
-| Hardware | Create 3, Raspberry Pi 5, 2D LiDAR and a PC | Only a PC |
+| Hardware | Create 3, Raspberry Pi 5, 2D LiDAR and a PC | Only a PC (Linux, or [Windows with WSL2](#windows-with-wsl2)) |
 | Where the code runs | Raspberry Pi (RViz and the scripts that open it: PC) | PC |
 | Packages to build | `--packages-up-to mrobot_bringup` (includes the LiDAR drivers) | `--packages-select` with 4 packages (no LiDAR drivers) |
 | Robot namespace | `r2` by default; it must match the Create 3 | None |
@@ -330,6 +330,48 @@ On another Ubuntu version, you can use an Ubuntu 24.04 container, for example wi
 distrobox create --name jazzy --image ubuntu:24.04
 distrobox enter jazzy
 ```
+
+### Windows with WSL2
+
+The simulation also works on Windows with WSL2.
+
+**Requirements:** Windows 11, or Windows 10 build 19044 or later, with WSL2 (not WSL1) and an up-to-date graphics driver
+installed **on Windows**. See [Microsoft's guide to Linux GUI apps](https://learn.microsoft.com/en-us/windows/wsl/tutorials/gui-apps).
+Do not install a Linux graphics driver inside WSL.
+
+In PowerShell as administrator:
+
+```powershell
+wsl --install -d Ubuntu-24.04
+wsl --update
+wsl -l -v          # the VERSION column must be 2
+```
+
+Then open Ubuntu and follow [Installation](#installation), [Build](#build) and [Run](#run). Distrobox is not needed.
+
+Clone the repository **inside the Linux file system** (for example `~/MaterialenBuddy`), not in `/mnt/c/...`: builds are
+much slower there, and using Git from Windows can change line endings and break the scripts.
+
+**Check the simulation:** the simulated LiDAR depends on graphics rendering, so an open Gazebo window is not enough.
+With the simulation running, each of these must keep reporting a rate (stop each one with `Ctrl+C`):
+
+```bash
+ros2 topic hz /clock    # Gazebo clock
+ros2 topic hz /scan     # simulated LiDAR
+ros2 topic hz /odom     # odometry
+```
+
+**If there are graphics problems**, these are things to try (not guaranteed fixes). Set the variable in the terminal
+before launching the simulation:
+
+| Problem | What to try |
+| --- | --- |
+| Gazebo is black, flickers or closes | `export LIBGL_ALWAYS_SOFTWARE=1` (renders on the CPU, so it is slower) |
+| It is slow and the PC has an NVIDIA GPU plus an integrated one | `export MESA_D3D12_DEFAULT_ADAPTER_NAME=NVIDIA` |
+| Only the Gazebo window fails | Add `headless:=true` to the launch command (the LiDAR still needs rendering) |
+| `/scan` does not publish | `sudo apt install mesa-utils`, then `glxinfo -B` to see the renderer (`llvmpipe` means CPU rendering) |
+
+This section covers the simulation only. Connecting WSL to the real robot needs additional network configuration.
 
 ### Installation
 
