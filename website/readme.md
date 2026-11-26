@@ -1,11 +1,11 @@
 # Website
 
-Met de webapp van MaterialenBuddy kan zorgpersoneel de medicijnvoorraad bekijken en een levering aanvragen. Bij een aanvraag kiest de gebruiker een bestemming en geeft die per medicijn het gewenste aantal op. Gebruikers met de rol `staff` kunnen de voorraad ook aanvullen. De aanvragen en voorraad worden opgeslagen in MySQL. 
+Healthcare staff can use the MaterialenBuddy web app to check medication stock and request a delivery. To request a delivery, users choose a destination and enter the quantity needed for each medication. Users with the `staff` role can also replenish stock. Delivery requests and stock levels are stored in MySQL.
 
-## Onderdelen
+## Components
 
-- [`webapp/`](webapp/) bevat de webpagina en de FastAPI-server.
-- [`database/`](database/) bevat het MySQL-schema en de testgegevens.
-- [`authentik/`](authentik/) bevat de Docker Compose-configuratie voor het inloggen via Authentik.
+- [`webapp/`](webapp/) contains the web page and FastAPI server.
+- [`database/`](database/) contains the MySQL schema and test data.
+- [`authentik/`](authentik/) contains the Docker Compose configuration for signing in with Authentik.
 
 

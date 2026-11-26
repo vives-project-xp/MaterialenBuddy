@@ -1,7 +1,7 @@
 ﻿# Media
 
-In deze map verzamelen we het beeldmateriaal van MaterialenBuddy. Hier vind je posters, foto's en video's die de ontwikkeling en werking van het project in beeld brengen.
+This folder contains posters, photos, and videos that document how MaterialenBuddy was developed and how it works.
 
-- [Posters](posters/) bevat de [poster van MaterialenBuddy](posters/poster%20materialenbuddy.png).
-- [Foto's](fotos/) is de map voor projectfoto's.
-- [Video's](videos/) is de map voor projectvideo's.
+- [Posters](posters/) contains the [MaterialenBuddy poster](posters/poster%20materialenbuddy.png).
+- [Photos](photos/) contains project photos.
+- [Videos](videos/) contains project videos.

@@ -1,7 +1,7 @@
-# Projectdocumentatie
+# Project Documentation
 
-Hier vind je het architectuurdiagram van MaterialenBuddy en het beeldmateriaal bij de projectdocumentatie.
+This folder contains the MaterialenBuddy architecture diagram and supporting visuals.
 
-- [Architectuurdiagram](architecture.drawio) toont hoe de webapp, database en robot binnen het systeem samenhangen.
-- [Afbeeldingen](images/) bevat illustraties van de gebruikte hardware en software.
-- [Projectvideo](Video%27s/Untitled%20design.mp4) opent de video die bij de documentatie staat.
+- The [architecture diagram](architecture.drawio) shows how the web app, database, and robot work together.
+- The [images folder](images/) contains illustrations of the hardware and software used in the project.
+- The [project video](Video%27s/Untitled%20design.mp4) accompanies the documentation.
