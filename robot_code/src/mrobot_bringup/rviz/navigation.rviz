@@ -1,5 +1,5 @@
 # Minimal RViz configuration for navigating with Nav2. '/<robot_namespace>' is replaced by '/r2' (or by nothing).
-# Written by hand and untested: if something is not visible, adjust it in RViz and save with File > Save Config.
+# Written by hand: if something is not visible, adjust it in RViz and save with File > Save Config.
 # Tools: "2D Pose Estimate" (AMCL initial pose) and "2D Goal Pose" (navigation goal).
 Panels:
   - Class: rviz_common/Displays

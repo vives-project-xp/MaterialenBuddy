@@ -1,5 +1,5 @@
 # Minimal RViz configuration for mapping. '/<robot_namespace>' is replaced by '/r2' (or by nothing) at launch.
-# Written by hand and untested: if something is not visible, adjust it in RViz and save with File > Save Config.
+# Written by hand: if something is not visible, adjust it in RViz and save with File > Save Config.
 Panels:
   - Class: rviz_common/Displays
     Name: Displays

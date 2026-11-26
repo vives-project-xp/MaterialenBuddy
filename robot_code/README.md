@@ -6,12 +6,8 @@ running **ROS 2 Jazzy**.
 The robot does three things:
 
 1. **Maps** a space with `slam_toolbox`, driven by teleoperation.
-2. **Navigates** autonomously on the saved map, with AMCL and Nav2 (goals are given from RViz).
+2. **Navigates** autonomously with Nav2, on a fixed map (AMCL) or a live one (`slam_toolbox`). Goals are given from RViz.
 3. It is **simulated** first in Gazebo Harmonic.
-
-> **Status: none of this has been tested yet.** The code is written and reviewed, and the scripts and
-> configuration files pass syntax checks, but it has not been run with ROS 2, Gazebo or the
-> robot. See [First run](#first-run-what-to-check).
 
 ## Structure
 
@@ -129,20 +125,81 @@ This generates four files in `maps/`: `map_name.yaml` and `map_name.pgm` (the im
 
 ### 2. Navigate
 
-Put the robot at the point you mapped from (the map origin, normally the dock) and, on the Pi:
+There are two modes, selected with `live_mapping`. In both, the goal is given with RViz's **2D Goal Pose** tool.
+
+| | Fixed map | Live map |
+| --- | --- | --- |
+| Argument | `live_mapping:=false` | `live_mapping:=true` (default) |
+| Localization | `map_server` + AMCL | `slam_toolbox` |
+| Saved map is updated while navigating | No (new obstacles are handled by the Nav2 costmaps) | Yes, in memory |
+| Initial pose | Launch arguments or **2D Pose Estimate** | Launch arguments only |
+| Files needed in `maps/` | `.yaml` and `.pgm` | `.yaml`, `.posegraph` and `.data` |
+
+Run the launch commands on the Pi, from `robot_code/`. On your PC, open RViz with `scripts/rviz_remote.sh navigation`.
+
+#### Fixed map
+
+Use this mode when the robot can start anywhere and the environment does not need to be remapped.
 
 ```bash
-ros2 launch mrobot_bringup navigation.launch.py map_yaml:=$PWD/maps/map1.yaml lidar_model:=rplidar_c1 rviz:=false
+ros2 launch mrobot_bringup navigation.launch.py map_yaml:=$PWD/maps/map1.yaml lidar_model:=rplidar_c1 rviz:=false \
+  live_mapping:=false set_initial_pose:=false
 ```
 
-On your PC: `scripts/rviz_remote.sh navigation`. The goal is given with RViz's **2D Goal Pose** tool.
+In RViz:
 
-By default (`live_mapping:=true`) `slam_toolbox` loads the saved pose graph (`map1.posegraph/.data`, next to the `.yaml`) and
-**keeps mapping while navigating**, so new objects update the global map and costmap. Use `live_mapping:=false` for the
-classic static map + AMCL.
+1. Click **2D Pose Estimate**, click the robot's position on the map and drag towards where its front is facing.
+   Until you do this, warnings about the missing transform to `map` are expected.
+2. Check that the LiDAR points line up with the walls. If they do not, repeat the estimate.
+3. Drive and turn the robot slowly with the keyboard so AMCL can refine the pose.
+4. Send the goal with **2D Goal Pose**.
 
-The robot starts at `initial_x/y/yaw` (`0 0 0` by default, the map origin). If the robot is somewhere else, pass those
-arguments or `set_initial_pose:=false` and use **2D Pose Estimate** in RViz.
+If the robot always starts at the map origin, facing the same way as when you started mapping, you can leave out
+`set_initial_pose:=false`: it then starts at `initial_x/y/yaw` (`0 0 0` by default).
+
+#### Live map
+
+Use this mode to navigate and keep updating the map at the same time. **The initial pose must be correct:** otherwise
+new scans can be added in the wrong place and corrupt the map. **2D Pose Estimate** does not correct the pose in this mode.
+
+**Starting at the map origin:** put the robot where you started mapping (normally the dock), facing the same way, and run:
+
+```bash
+ros2 launch mrobot_bringup navigation.launch.py map_yaml:=$PWD/maps/map1.yaml lidar_model:=rplidar_c1 rviz:=false \
+  live_mapping:=true
+```
+
+**Starting somewhere else:** find the pose with AMCL first.
+
+1. Start the [fixed map](#fixed-map) mode, set the pose and drive until the LiDAR points line up with the walls.
+2. Stop the robot and, before closing the launch, read its pose:
+
+   ```bash
+   ros2 topic echo /r2/amcl_pose --once --qos-durability transient_local --qos-reliability reliable
+   ```
+
+3. Calculate the yaw in radians, replacing `Z` and `W` with `orientation.z` and `orientation.w`:
+
+   ```bash
+   python3 -c "import math; print(2*math.atan2(Z, W))"
+   ```
+
+4. Close the launch **without moving the robot** and start the live mode with your values (these are an example):
+
+   ```bash
+   ros2 launch mrobot_bringup navigation.launch.py map_yaml:=$PWD/maps/map1.yaml lidar_model:=rplidar_c1 rviz:=false \
+     live_mapping:=true initial_x:=1.25 initial_y:=-0.40 initial_yaw:=1.57
+   ```
+
+5. Before sending a goal, check in RViz that the LiDAR points line up with the map. If they do not, close the launch
+   and do not save that map.
+
+The updates are not saved automatically. To keep them, save the map while the launch is running, with a new name so the
+original is preserved:
+
+```bash
+scripts/save_map.sh map2
+```
 
 ### Useful arguments
 
@@ -153,7 +210,7 @@ arguments or `set_initial_pose:=false` and use **2D Pose Estimate** in RViz.
 | `laser_yaw` | mapping, navigation | Overrides the profile rotation (rad). `-1.5707963` was used with the real LD19 |
 | `robot_namespace` | all | Robot namespace (default `r2`; empty = none) |
 | `rviz` | all | `false` to not open RViz (on the Pi) |
-| `live_mapping` | navigation | `true` (default): keep mapping with slam_toolbox while navigating; `false`: static map + AMCL |
+| `live_mapping` | navigation | `true` (default): [live map](#live-map); `false`: [fixed map](#fixed-map) |
 | `map_yaml` | navigation | Absolute path to the map `.yaml` (required) |
 
 ## Simulation (on a PC)
@@ -248,7 +305,7 @@ The default world is an 8x8 m room with a divider wall and obstacles.
 - **The Pi's model includes the full Create 3 URDF**, not a minimal one. The Create 3 also publishes its own frames:
   check that there are no duplicate transforms (`ros2 topic echo /r2/tf_static`).
 
-## First run: what to check
+## Troubleshooting
 
 Places where something is most likely to need adjusting:
 
@@ -257,7 +314,7 @@ Places where something is most likely to need adjusting:
 - **The scan comes out rotated or mirrored:** adjust `laser_yaw`; for mirroring, `laser_scan_dir` (LD19) or `inverted`
   (RPLIDAR) in the LiDAR profile.
 - **`slam_toolbox` does not activate:** it is a lifecycle node; the launch configures and activates it. Check `ros2 lifecycle get /r2/slam_toolbox`.
-- **The `.rviz` files** are written by hand and untested: if something is not visible, adjust it in RViz and save the configuration.
+- **The `.rviz` files** are written by hand: if something is not visible, adjust it in RViz and save the configuration.
 - **Simulation:** that the *spawners* do not time out while the meshes load, that `/odom`, `/tf` and
   `/joint_states` exist, and that the meshes are found (`GZ_SIM_RESOURCE_PATH`).
 
