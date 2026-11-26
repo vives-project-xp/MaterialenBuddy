@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!-- Create 3 + a 2D LiDAR mounted at the center, on top of the robot lid. The LiDAR is chosen with lidar_model:
+     urdf/sensors/lidar_<model>.urdf.xacro. Each of those files defines the macro "lidar" with the same parameters
+     and creates the link <name>_frame on its scan plane. -->
+<robot name="create3_lidar" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:arg name="lidar_model" default="ld19"/>
+
+  <!-- Official robot (declares the "gazebo" and "namespace" args and the body properties) -->
+  <xacro:include filename="$(find irobot_create_description)/urdf/create3.urdf.xacro"/>
+  <xacro:include filename="$(find irobot_create_description)/urdf/sensors/lidar_$(arg lidar_model).urdf.xacro"/>
+
+  <!-- LiDAR frame rotation relative to the robot front (rad). It depends on the driver and the mounting:
+       the launch files take it from the LiDAR profile. -->
+  <xacro:arg name="laser_yaw" default="0.0"/>
+
+  <!-- Create 3 lid in the base_link frame (top of the collision cylinder) -->
+  <xacro:property name="create3_top_z"
+                  value="${body_z_offset + body_collision_z_offset + base_link_z_offset + body_length / 2}"/>
+
+  <!-- The sensor base rests on the lid. Centered: x = y = 0. -->
+  <xacro:lidar name="laser" parent="base_link" mount_z="${create3_top_z}" yaw="$(arg laser_yaw)"
+               gazebo="$(arg gazebo)" visualize="$(arg visualize_rays)"/>
+
+</robot>

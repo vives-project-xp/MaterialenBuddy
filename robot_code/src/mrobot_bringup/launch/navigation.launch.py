@@ -1,4 +1,4 @@
-"""Real robot, navigation: hardware_base (robot_state_publisher + LD19 + relays) + map_server + AMCL + Nav2 + RViz.
+"""Real robot, navigation: hardware_base (robot_state_publisher + LiDAR + relays) + map_server + AMCL + Nav2 + RViz.
 
 The map is created beforehand with `mapping.launch.py` (teleoperation) and saved with scripts/save_map.sh.
 Here the robot navigates on it with AMCL.
@@ -12,7 +12,7 @@ Each include applies the namespace on its own: this launch does NOT wrap them in
 
 Usage:
     ros2 launch mrobot_bringup navigation.launch.py map_yaml:=$HOME/MaterialenBuddy/robot_code/maps/map1.yaml \\
-        lidar_port:=/dev/ldlidar
+        lidar_model:=rplidar_c1
 """
 
 import os
@@ -25,6 +25,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+from lidar_profile import lidar_model_argument  # noqa: E402
 from mrobot_namespace import robot_namespace_argument  # noqa: E402
 
 
@@ -40,9 +41,8 @@ def generate_launch_description():
         launch_arguments={
             "robot_namespace": namespace,
             "use_sim_time": use_sim_time,
+            "lidar_model": LaunchConfiguration("lidar_model"),
             "lidar_port": LaunchConfiguration("lidar_port"),
-            "lidar_baudrate": LaunchConfiguration("lidar_baudrate"),
-            "laser_scan_dir": LaunchConfiguration("laser_scan_dir"),
             "laser_yaw": LaunchConfiguration("laser_yaw"),
         }.items(),
     )
@@ -63,6 +63,7 @@ def generate_launch_description():
             "initial_yaw": LaunchConfiguration("initial_yaw"),
             "odom_topic": "odom_reliable",
             "live_mapping": LaunchConfiguration("live_mapping"),
+            "lidar_model": LaunchConfiguration("lidar_model"),
         }.items(),
     )
 
@@ -74,16 +75,11 @@ def generate_launch_description():
                 "map_yaml", description="Absolute path to the map .yaml."),
             DeclareLaunchArgument(
                 "rviz", default_value="true", description="true|false"),
+            lidar_model_argument(),
             DeclareLaunchArgument(
-                "lidar_port",
-                default_value="/dev/ttyUSB0",
-                description="LD19 serial port; e.g. /dev/ldlidar.",
-            ),
-            DeclareLaunchArgument("lidar_baudrate", default_value="230400"),
+                "lidar_port", default_value="", description="Empty = the profile value (/dev/lidar)."),
             DeclareLaunchArgument(
-                "laser_scan_dir", default_value="true", description="true|false"),
-            DeclareLaunchArgument(
-                "laser_yaw", default_value="0.0", description="LD19 rotation (rad)."),
+                "laser_yaw", default_value="", description="LiDAR rotation (rad). Empty = the profile value."),
             DeclareLaunchArgument(
                 "set_initial_pose",
                 default_value="true",

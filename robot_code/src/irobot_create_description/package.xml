@@ -6,7 +6,7 @@
   <description>Robot description (URDF/XACRO) of the Create 3 with the LD19 LiDAR</description>
   <maintainer email="your_email@example.com">Brandon</maintainer>
   <!-- BSD-3-Clause: official iRobot URDF/XACRO and meshes (see LICENSE and ATTRIBUTION.md).
-       Apache-2.0: own files (create3_ld19, lidar_ld19, launch and rviz). -->
+       Apache-2.0: own files (create3_lidar, lidar_*, launch and rviz). -->
   <license>BSD-3-Clause</license>
   <license>Apache-2.0</license>
 

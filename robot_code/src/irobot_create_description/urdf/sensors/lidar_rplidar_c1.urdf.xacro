@@ -1,0 +1,107 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- SLAMTEC RPLIDAR C1 (C1M1) characteristics, per datasheet v1.1 -->
+  <!-- Dimensions (m / kg): 55.6 x 55.6 x 41.3 mm; base 23.1 mm + rotating head 18.2 mm -->
+  <xacro:property name="c1_length" value="0.0556"/>
+  <xacro:property name="c1_width" value="0.0556"/>
+  <xacro:property name="c1_total_height" value="0.0413"/>
+  <xacro:property name="c1_dome_radius" value="0.025"/>  <!-- approximate: not given in the datasheet (visual only) -->
+  <xacro:property name="c1_dome_height" value="0.0182"/>
+  <xacro:property name="c1_body_height" value="${c1_total_height - c1_dome_height}"/>
+  <!-- Scan plane: 29.8 mm above the bottom. The laser frame sits on that plane. -->
+  <xacro:property name="c1_scan_z_from_base" value="0.0298"/>
+  <xacro:property name="c1_mass" value="0.110"/>
+
+  <!-- Scanning -->
+  <xacro:property name="c1_range_min" value="0.05"/>          <!-- m -->
+  <xacro:property name="c1_range_max" value="12.0"/>          <!-- m (white 70%; with black 10%: 6 m) -->
+  <xacro:property name="c1_fov" value="${2 * pi}"/>           <!-- rad: 360° -->
+  <xacro:property name="c1_samples" value="500"/>             <!-- 0.72° at 10 Hz (5 kHz) -->
+  <xacro:property name="c1_update_rate" value="10"/>          <!-- Hz (range 8-12) -->
+  <xacro:property name="c1_noise_stddev" value="0.015"/>      <!-- m: estimate from the ±30 mm accuracy -->
+
+  <!-- Real robot note: sllidar_ros2 publishes the sensor front at 180° of this frame (see laser_yaw
+       in the rplidar_c1 profile). The simulated sensor has its 0° on +X, so simulation uses yaw 0. -->
+
+  <!-- LiDAR macro (same name and parameters in every lidar_<model>.urdf.xacro):
+       <xacro:lidar parent="base_link" mount_z="0.12" yaw="0"/>
+       mount_z = height of the sensor base above the parent frame.
+       gazebo:=none (default) = model only (real robot); "ignition" adds the gpu_lidar sensor. -->
+  <xacro:macro name="lidar" params="name:=laser parent:=base_link mount_z yaw:=0 gazebo:=none visualize:=false">
+
+    <!-- Laser frame: origin at the center of the scan plane, +X = sensor front -->
+    <link name="${name}_frame">
+      <!-- Fixed base -->
+      <visual>
+        <origin xyz="0 0 ${c1_body_height / 2 - c1_scan_z_from_base}"/>
+        <geometry>
+          <box size="${c1_length} ${c1_width} ${c1_body_height}"/>
+        </geometry>
+        <material name="c1_black">
+          <color rgba="0.1 0.1 0.1 1.0"/>
+        </material>
+      </visual>
+      <!-- Rotating dome -->
+      <visual>
+        <origin xyz="0 0 ${c1_body_height + c1_dome_height / 2 - c1_scan_z_from_base}"/>
+        <geometry>
+          <cylinder radius="${c1_dome_radius}" length="${c1_dome_height}"/>
+        </geometry>
+        <material name="c1_black"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 ${c1_total_height / 2 - c1_scan_z_from_base}"/>
+        <geometry>
+          <box size="${c1_length} ${c1_width} ${c1_total_height}"/>
+        </geometry>
+      </collision>
+      <xacro:inertial_cuboid_with_pose mass="${c1_mass}" x="${c1_length}" y="${c1_width}" z="${c1_total_height}">
+        <origin xyz="0 0 ${c1_total_height / 2 - c1_scan_z_from_base}"/>
+      </xacro:inertial_cuboid_with_pose>
+    </link>
+
+    <joint name="${name}_joint" type="fixed">
+      <origin xyz="0 0 ${mount_z + c1_scan_z_from_base}" rpy="0 0 ${yaw}"/>
+      <parent link="${parent}"/>
+      <child link="${name}_frame"/>
+    </joint>
+
+    <!-- Simulation (Gazebo Harmonic): GPU LiDAR with the RPLIDAR C1 characteristics -->
+    <xacro:if value="${gazebo == 'ignition'}">
+      <gazebo reference="${name}_frame">
+        <sensor name="${name}" type="gpu_lidar">
+          <topic>scan</topic>
+          <gz_frame_id>${name}_frame</gz_frame_id>
+          <update_rate>${c1_update_rate}</update_rate>
+          <visualize>${visualize}</visualize>
+          <always_on>true</always_on>
+          <lidar>
+            <scan>
+              <horizontal>
+                <samples>${c1_samples}</samples>
+                <resolution>1</resolution>
+                <min_angle>${-c1_fov / 2}</min_angle>
+                <max_angle>${c1_fov / 2}</max_angle>
+              </horizontal>
+            </scan>
+            <range>
+              <min>${c1_range_min}</min>
+              <max>${c1_range_max}</max>
+              <resolution>0.001</resolution>
+            </range>
+            <noise>
+              <type>gaussian</type>
+              <mean>0.0</mean>
+              <stddev>${c1_noise_stddev}</stddev>
+            </noise>
+          </lidar>
+        </sensor>
+      </gazebo>
+      <gazebo reference="${name}_joint">
+        <preserveFixedJoint>true</preserveFixedJoint>
+      </gazebo>
+    </xacro:if>
+
+  </xacro:macro>
+</robot>

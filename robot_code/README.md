@@ -1,6 +1,6 @@
 # robot_code
 
-ROS 2 code for the MaterialenBuddy robot: an **iRobot Create 3** with a **Raspberry Pi 5** and an **LD19 LiDAR**,
+ROS 2 code for the MaterialenBuddy robot: an **iRobot Create 3** with a **Raspberry Pi 5** and a 2D LiDAR (**LD19** or **SLAMTEC RPLIDAR C1**),
 running **ROS 2 Jazzy**.
 
 The robot does three things:
@@ -23,11 +23,12 @@ robot_code/
 │   ├── save_map.sh                saves the map that slam_toolbox is building
 │   └── rviz_remote.sh             opens RViz on your PC for the robot running on the Pi
 └── src/
-    ├── irobot_create_description/ Create 3 URDF (official) + LD19 (own) + launch to view it in RViz
+    ├── irobot_create_description/ Create 3 URDF (official) + LiDAR models (own) + launch to view it in RViz
     ├── mrobot_bringup/            real robot: LiDAR, mapping and navigation
     ├── mrobot_simulation/         Gazebo Harmonic
     ├── irobot_create_control/     wheel controller configuration (simulation only; minimal copy)
-    └── ldlidar_stl_ros2/          official LD19 driver (a copy, no need to clone it)
+    ├── ldlidar_stl_ros2/          official LD19 driver (a copy, no need to clone it)
+    └── sllidar_ros2/              official RPLIDAR driver (a copy, no need to clone it)
 ```
 
 The `mrobot_` prefix marks this project's own packages; the iRobot packages keep their original name
@@ -37,7 +38,7 @@ because the official URDFs reference it.
 
 - The **Create 3 runs its own firmware**: it is reached over the network and lives in the `/r2` namespace
   (`/r2/odom`, `/r2/tf`, `/r2/cmd_vel`...). This code **does not start it**.
-- The **Raspberry Pi** runs this workspace: it reads the LD19 over USB, publishes the robot model and runs `slam_toolbox` or
+- The **Raspberry Pi** runs this workspace: it reads the LiDAR over USB, publishes the robot model and runs `slam_toolbox` or
   Nav2. The Pi and the Create 3 must use the same `ROS_DOMAIN_ID` and the same RMW.
 - **RViz** is best opened on your PC (`scripts/rviz_remote.sh`), not on the Pi.
 
@@ -53,7 +54,7 @@ The whole stack hangs from the robot namespace (`/r2/scan`, `/r2/map`...). It is
 
 ```bash
 cd robot_code
-scripts/setup_pi.sh                       # rosdep, ROS_DOMAIN_ID / RMW, udev rule /dev/ldlidar
+scripts/setup_pi.sh                       # rosdep, ROS_DOMAIN_ID / RMW, udev rule /dev/lidar
 colcon build --symlink-install --parallel-workers 2 --packages-up-to mrobot_bringup
 source install/setup.bash
 ```
@@ -69,6 +70,31 @@ After `setup_pi.sh`, log out and back in (`dialout` group), and configure the **
 ros2 topic list | grep -E '/r2/(odom|cmd_vel)'
 ```
 
+## Choosing the LiDAR
+
+| `lidar_model` | Sensor | Driver |
+| --- | --- | --- |
+| `ld19` (default) | LDRobot LD19 | `ldlidar_stl_ros2` |
+| `rplidar_c1` | SLAMTEC RPLIDAR C1 | `sllidar_ros2` |
+
+Pass `lidar_model:=rplidar_c1` to the launch files, or set it once:
+
+```bash
+echo 'export LIDAR_MODEL=rplidar_c1' >> ~/.bashrc
+```
+
+Connect only one USB LiDAR at a time: both use `/dev/lidar`. If you already ran an older `setup_pi.sh`, run it
+again to create that symlink, then rebuild.
+
+**RPLIDAR C1 orientation:** the profile uses `laser_yaw` = π, which assumes the arrow on top points to the robot
+front (cable to the back). Check it in RViz with an object in front of the robot, then one on its left.
+
+**Adding a LiDAR:** install its driver; create `mrobot_bringup/config/lidars/<name>.yaml` and
+`irobot_create_description/urdf/sensors/lidar_<name>.urdf.xacro` (copy existing ones; the macro must be called
+`lidar` and create `laser_frame`); add the driver to `mrobot_bringup/package.xml` and, if needed, a udev rule;
+rebuild. The driver must publish a `LaserScan` with a positive `angle_increment`. Nav2 costmap ranges stay in
+`nav2_params.yaml`: lower them for a shorter-range sensor.
+
 ## Using the real robot
 
 ### 1. Map
@@ -76,7 +102,7 @@ ros2 topic list | grep -E '/r2/(odom|cmd_vel)'
 On the Pi:
 
 ```bash
-ros2 launch mrobot_bringup mapping.launch.py lidar_port:=/dev/ldlidar rviz:=false
+ros2 launch mrobot_bringup mapping.launch.py lidar_model:=rplidar_c1 rviz:=false
 ```
 
 On your PC, to see the map:
@@ -106,7 +132,7 @@ This generates four files in `maps/`: `map_name.yaml` and `map_name.pgm` (the im
 Put the robot at the point you mapped from (the map origin, normally the dock) and, on the Pi:
 
 ```bash
-ros2 launch mrobot_bringup navigation.launch.py map_yaml:=$PWD/maps/map1.yaml lidar_port:=/dev/ldlidar rviz:=false
+ros2 launch mrobot_bringup navigation.launch.py map_yaml:=$PWD/maps/map1.yaml lidar_model:=rplidar_c1 rviz:=false
 ```
 
 On your PC: `scripts/rviz_remote.sh navigation`. The goal is given with RViz's **2D Goal Pose** tool.
@@ -122,9 +148,9 @@ arguments or `set_initial_pose:=false` and use **2D Pose Estimate** in RViz.
 
 | Argument | Where | What for |
 | --- | --- | --- |
-| `lidar_port` | mapping, navigation | LD19 port (`/dev/ldlidar` with the udev rule; `/dev/ttyUSB0` without it) |
-| `laser_scan_dir` | mapping, navigation | LD19 scan direction: flip it if the scan comes out inverted |
-| `laser_yaw` | mapping, navigation | Sensor rotation relative to the robot front (rad). `-1.5707963` was used with the real sensor |
+| `lidar_model` | all launches, simulation | LiDAR profile: `ld19` or `rplidar_c1` (default: `LIDAR_MODEL` or `ld19`) |
+| `lidar_port` | mapping, navigation | Serial port, if it is not `/dev/lidar` (e.g. `/dev/ttyUSB0`) |
+| `laser_yaw` | mapping, navigation | Overrides the profile rotation (rad). `-1.5707963` was used with the real LD19 |
 | `robot_namespace` | all | Robot namespace (default `r2`; empty = none) |
 | `rviz` | all | `false` to not open RViz (on the Pi) |
 | `live_mapping` | navigation | `true` (default): keep mapping with slam_toolbox while navigating; `false`: static map + AMCL |
@@ -147,8 +173,8 @@ The default world is an 8x8 m room with a divider wall and obstacles.
 
 ## Things that are not obvious
 
-- **`scan_resampler`**: the real LD19 delivers between ~500 and 504 readings per revolution, and `slam_toolbox` requires a fixed number.
-  The node publishes `scan` with always 500 beams, taken from `scan_raw`. It is not needed in simulation.
+- **`scan_resampler`**: the number of readings per revolution of the driver can differ from the profile (the LD19 varies between
+  ~500 and 504), and `slam_toolbox` requires a fixed number. The node publishes `scan` with the profile's `num_beams`, taken from `scan_raw`. It is not needed in simulation.
 - **`odom_relay`**: the Create 3 publishes `odom` with *best effort* QoS and Nav2 asks for *reliable*; the node republishes it on
   `odom_reliable`. Real robot only.
 - **`cmd_vel_stamper`**: Jazzy's `diff_drive_controller` receives `TwistStamped`, but the teleop and Nav2 publish
@@ -162,8 +188,9 @@ The default world is an 8x8 m room with a divider wall and obstacles.
 Places where something is most likely to need adjusting:
 
 - **Model (PC):** `ros2 launch irobot_create_description display.launch.py`. `rviz/model.rviz` still has to be created from RViz.
-- **LD19 driver build and serial port:** `ls -l /dev/ldlidar`; if it does not exist, run `lsusb` and check the udev rule identifier.
-- **The scan comes out rotated or inverted:** adjust `laser_yaw` and `laser_scan_dir`.
+- **LiDAR driver build and serial port:** `ls -l /dev/lidar`; if it does not exist, run `lsusb` and check the udev rule identifier.
+- **The scan comes out rotated or mirrored:** adjust `laser_yaw`; for mirroring, `laser_scan_dir` (LD19) or `inverted`
+  (RPLIDAR) in the LiDAR profile.
 - **`slam_toolbox` does not activate:** it is a lifecycle node; the launch configures and activates it. Check `ros2 lifecycle get /r2/slam_toolbox`.
 - **The `.rviz` files** are written by hand and untested: if something is not visible, adjust it in RViz and save the configuration.
 - **Simulation:** that the *spawners* do not time out while the meshes load, that `/odom`, `/tf` and
@@ -176,6 +203,7 @@ Places where something is most likely to need adjusting:
 | `irobot_create_description` (official URDF and meshes) | [iRobotEducation/create3_sim](https://github.com/iRobotEducation/create3_sim), branch `jazzy` | BSD-3-Clause |
 | `irobot_create_control` | same (minimal copy) | BSD-3-Clause |
 | `ldlidar_stl_ros2` | [ldrobotSensorTeam/ldlidar_stl_ros2](https://github.com/ldrobotSensorTeam/ldlidar_stl_ros2) (with one modification) | MIT |
+| `sllidar_ros2` | [Slamtec/sllidar_ros2](https://github.com/Slamtec/sllidar_ros2) (with one modification) | BSD |
 
-The details of what was copied and what was modified are in `VENDORED.md` (`ldlidar_stl_ros2`, `irobot_create_control`) and in
+The details of what was copied and what was modified are in `VENDORED.md` (`ldlidar_stl_ros2`, `sllidar_ros2`, `irobot_create_control`) and in
 `ATTRIBUTION.md` (`irobot_create_description`). The project's own code is Apache-2.0.

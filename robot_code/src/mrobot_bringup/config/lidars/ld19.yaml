@@ -1,0 +1,22 @@
+# LiDAR profile: LDRobot LD19. Selected with lidar_model:=ld19 (or LIDAR_MODEL=ld19).
+# The URDF model is irobot_create_description/urdf/sensors/lidar_ld19.urdf.xacro.
+driver:
+  package: ldlidar_stl_ros2
+  executable: ldlidar_stl_ros2_node
+  name: lidar_driver
+  port_parameter: port_name    # parameter overridden by the lidar_port launch argument
+  parameters:
+    product_name: LDLiDAR_LD19
+    topic_name: scan_raw
+    frame_id: laser_frame
+    port_name: /dev/lidar
+    port_baudrate: 230400
+    laser_scan_dir: true       # flip it if the scan comes out mirrored
+    enable_angle_crop_func: false
+    angle_crop_min: 135.0
+    angle_crop_max: 225.0
+  remappings: {}
+num_beams: 500                 # fixed size of /scan (scan_resampler)
+min_range: 0.10                # m, SLAM and AMCL
+max_range: 12.0                # m, SLAM and AMCL
+laser_yaw: 0.0                 # rad, depends on the mounting. -1.5707963 was used with the real sensor

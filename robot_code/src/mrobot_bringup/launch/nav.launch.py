@@ -11,7 +11,7 @@ Localization, two modes (live_mapping):
 Arguments: robot_namespace (env CREATE3_ROBOT_NAMESPACE or 'r2'; empty = none), use_sim_time (false),
 map_yaml (absolute path to the map .yaml; required), rviz (true), params_file (config/nav2_params.yaml),
 autostart (true), odom_topic ('odom'; 'odom_reliable' on the real robot, see odom_relay.py),
-live_mapping (true), set_initial_pose (false), initial_x / initial_y / initial_yaw (0.0).
+live_mapping (true), lidar_model (env LIDAR_MODEL or 'ld19'), set_initial_pose (false), initial_x / initial_y / initial_yaw (0.0).
 
 Namespace: same as slam.launch.py (PushRosNamespace, relative TF, RewrittenYaml).
 
@@ -34,6 +34,7 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+from lidar_profile import lidar_model_argument, load_lidar_profile  # noqa: E402
 from mrobot_namespace import (  # noqa: E402
     namespaced,
     resolve_namespace,
@@ -101,6 +102,12 @@ def _setup(context, *args, **kwargs):
         },
     }
 
+    # AMCL uses the LiDAR ranges of the profile (they override nav2_params.yaml).
+    _, profile = load_lidar_profile(context)
+    amcl_extra = {**initial_pose,
+                  "laser_min_range": float(profile["min_range"]),
+                  "laser_max_range": float(profile["max_range"])}
+
     live_mapping = _truthy(context, "live_mapping")
     if live_mapping:
         base = os.path.splitext(map_yaml)[0]
@@ -113,6 +120,7 @@ def _setup(context, *args, **kwargs):
                     "robot_namespace": namespace,
                     "use_sim_time": use_sim_time,
                     "rviz": "false",
+                    "lidar_model": LaunchConfiguration("lidar_model"),
                     "posegraph": base,
                     "initial_x": LaunchConfiguration("initial_x"),
                     "initial_y": LaunchConfiguration("initial_y"),
@@ -124,7 +132,7 @@ def _setup(context, *args, **kwargs):
         # Localization: map_server + amcl. The lifecycle_manager name must match the YAML key.
         localization_nodes = [
             nav2_node("nav2_map_server", "map_server", extra={"yaml_filename": map_yaml}),
-            nav2_node("nav2_amcl", "amcl", extra=initial_pose),
+            nav2_node("nav2_amcl", "amcl", extra=amcl_extra),
             Node(
                 package="nav2_lifecycle_manager",
                 executable="lifecycle_manager",
@@ -175,6 +183,7 @@ def generate_launch_description():
     return LaunchDescription(
         [
             robot_namespace_argument(),
+            lidar_model_argument(),
             DeclareLaunchArgument("use_sim_time", default_value="false"),
             DeclareLaunchArgument(
                 "map_yaml",

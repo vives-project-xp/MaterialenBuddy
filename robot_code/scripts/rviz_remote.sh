@@ -2,8 +2,8 @@
 # Opens RViz on this machine (your PC) to view the real robot running on the Pi.
 #
 # On the Pi, launch first, without RViz (the Pi does not need a display):
-#   ros2 launch mrobot_bringup mapping.launch.py lidar_port:=/dev/ldlidar rviz:=false
-#   ros2 launch mrobot_bringup navigation.launch.py map_yaml:=<path> lidar_port:=/dev/ldlidar rviz:=false
+#   ros2 launch mrobot_bringup mapping.launch.py lidar_model:=rplidar_c1 rviz:=false
+#   ros2 launch mrobot_bringup navigation.launch.py map_yaml:=<path> lidar_model:=rplidar_c1 rviz:=false
 #
 # Both machines must be on the same network and use the same ROS_DOMAIN_ID and RMW_IMPLEMENTATION.
 #

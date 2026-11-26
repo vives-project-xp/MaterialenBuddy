@@ -1,0 +1,24 @@
+# LiDAR profile: SLAMTEC RPLIDAR C1 (DTOF). Selected with lidar_model:=rplidar_c1 (or LIDAR_MODEL=rplidar_c1).
+# Driver: Slamtec's sllidar_ros2, included in src/sllidar_ros2.
+# The URDF model is irobot_create_description/urdf/sensors/lidar_rplidar_c1.urdf.xacro.
+driver:
+  package: sllidar_ros2
+  executable: sllidar_node
+  name: lidar_driver
+  port_parameter: serial_port  # parameter overridden by the lidar_port launch argument
+  parameters:                  # values of Slamtec's sllidar_c1_launch.py, except frame_id
+    channel_type: serial
+    serial_port: /dev/lidar
+    serial_baudrate: 460800
+    frame_id: laser_frame
+    inverted: false
+    angle_compensate: true
+    scan_mode: Standard
+  remappings:
+    scan: scan_raw             # the driver has a fixed topic name
+num_beams: 500                 # 5 kHz at 10 Hz = 0.72 degrees
+min_range: 0.10                # m, SLAM and AMCL (sensor blind zone: 0.05)
+max_range: 12.0                # m, SLAM and AMCL (6 m on black surfaces)
+# The driver publishes the sensor's front (arrow, opposite the cable) at 180 degrees of laser_frame.
+# pi = mounted with the arrow pointing to the robot front. Check it on the real robot.
+laser_yaw: 3.14159265

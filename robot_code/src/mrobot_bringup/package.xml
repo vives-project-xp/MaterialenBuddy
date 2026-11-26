@@ -3,7 +3,7 @@
 <package format="3">
   <name>mrobot_bringup</name>
   <version>0.1.0</version>
-  <description>Real-robot bringup: LD19 LiDAR, robot description, mapping, navigation and helper nodes (scan_resampler, odom_relay).</description>
+  <description>Real-robot bringup: 2D LiDAR, robot description, mapping, navigation and helper nodes (scan_resampler, odom_relay).</description>
   <maintainer email="your_email@example.com">Brandon</maintainer>
   <license>Apache-2.0</license>
 
@@ -18,11 +18,17 @@
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
   <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
   <!--
     LD19 driver: `ldlidar_stl_ros2` (LDRobot, MIT). It is NOT a rosdep key, but it is included
     in this repository (src/ldlidar_stl_ros2/, see its VENDORED.md), so colcon builds it on its own.
   -->
   <exec_depend>ldlidar_stl_ros2</exec_depend>
+  <!--
+    RPLIDAR C1 driver: `sllidar_ros2` (Slamtec, BSD). It is NOT a rosdep key, but it is included
+    in this repository (src/sllidar_ros2/, see its VENDORED.md), so colcon builds it on its own.
+  -->
+  <exec_depend>sllidar_ros2</exec_depend>
 
   <!-- Mapping -->
   <exec_depend>slam_toolbox</exec_depend>

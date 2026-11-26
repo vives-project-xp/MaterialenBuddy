@@ -24,12 +24,11 @@
   <!-- Datasheet note: the sensor front is the X axis (angle 0), but the angle increases
        clockwise (left-hand rule); ROS uses counterclockwise. The driver corrects it. -->
 
-  <!-- LiDAR macro. Used like this:
-       <xacro:lidar_ld19 gazebo="$(arg gazebo)" parent="base_link">
-         <origin xyz="0 0 0.12" rpy="0 0 0"/>
-       </xacro:lidar_ld19>
+  <!-- LiDAR macro (same name and parameters in every lidar_<model>.urdf.xacro):
+       <xacro:lidar parent="base_link" mount_z="0.12" yaw="0"/>
+       mount_z = height of the sensor base above the parent frame.
        gazebo:=none (default) = model only (real robot); "ignition" adds the gpu_lidar sensor. -->
-  <xacro:macro name="lidar_ld19" params="name:=laser parent:=base_link gazebo:=none visualize:=false *origin">
+  <xacro:macro name="lidar" params="name:=laser parent:=base_link mount_z yaw:=0 gazebo:=none visualize:=false">
 
     <!-- Laser frame: origin at the center of the scan plane, +X = sensor front -->
     <link name="${name}_frame">
@@ -63,7 +62,7 @@
     </link>
 
     <joint name="${name}_joint" type="fixed">
-      <xacro:insert_block name="origin"/>
+      <origin xyz="0 0 ${mount_z + ld19_scan_z_from_base}" rpy="0 0 ${yaw}"/>
       <parent link="${parent}"/>
       <child link="${name}_frame"/>
     </joint>

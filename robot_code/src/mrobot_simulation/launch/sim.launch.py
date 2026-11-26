@@ -1,7 +1,7 @@
-"""Gazebo (Harmonic) + simulated Create 3 / LD19 + slam_toolbox or Nav2 + RViz.
+"""Gazebo (Harmonic) + simulated Create 3 / LiDAR + slam_toolbox or Nav2 + RViz.
 
 Arguments: world (room.sdf), headless (false), rviz (true), x / y / yaw (spawn pose),
-nav (false), map_yaml.
+nav (false), map_yaml, lidar_model.
 
 nav:=false (default): slam_toolbox to map with teleoperation.
 nav:=true: autonomous navigation on a saved map (map_server + AMCL + Nav2) instead of slam_toolbox;
@@ -31,7 +31,13 @@ from launch.actions import (
 from launch.conditions import IfCondition, UnlessCondition
 from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import Command, FindExecutable, LaunchConfiguration, PathJoinSubstitution
+from launch.substitutions import (
+    Command,
+    EnvironmentVariable,
+    FindExecutable,
+    LaunchConfiguration,
+    PathJoinSubstitution,
+)
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterValue
 
@@ -54,10 +60,11 @@ def generate_launch_description():
          os.environ.get("GZ_SIM_RESOURCE_PATH", "")],
     )
 
-    # `gazebo:=ignition` enables the Gazebo Harmonic plugins: ros2_control, sensors and the simulated LD19 LiDAR.
+    # `gazebo:=ignition` enables the Gazebo Harmonic plugins: ros2_control, sensors and the simulated LiDAR.
     robot_description = ParameterValue(
         Command([FindExecutable(name="xacro"), " ", os.path.join(description_share,
-                "urdf", "create3_ld19.urdf.xacro"), " gazebo:=ignition laser_yaw:=0"]),
+                "urdf", "create3_lidar.urdf.xacro"), " gazebo:=ignition laser_yaw:=0 lidar_model:=",
+                 LaunchConfiguration("lidar_model")]),
         value_type=str,
     )
 
@@ -161,6 +168,7 @@ def generate_launch_description():
             "robot_namespace": "",
             "use_sim_time": "true",
             "rviz": LaunchConfiguration("rviz"),
+            "lidar_model": LaunchConfiguration("lidar_model"),
         }.items(),
         condition=UnlessCondition(LaunchConfiguration("nav")),
     )
@@ -177,12 +185,16 @@ def generate_launch_description():
             "initial_x": LaunchConfiguration("x"),
             "initial_y": LaunchConfiguration("y"),
             "initial_yaw": LaunchConfiguration("yaw"),
+            "lidar_model": LaunchConfiguration("lidar_model"),
         }.items(),
         condition=IfCondition(LaunchConfiguration("nav")),
     )
 
     return LaunchDescription(
         [
+            DeclareLaunchArgument(
+                "lidar_model", default_value=EnvironmentVariable("LIDAR_MODEL", default_value="ld19"),
+                description="Simulated LiDAR (env LIDAR_MODEL or 'ld19')."),
             DeclareLaunchArgument(
                 "world",
                 default_value=PathJoinSubstitution(

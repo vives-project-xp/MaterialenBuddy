@@ -9,14 +9,14 @@
 #   1. Initializes/updates rosdep.
 #   2. ROS 2 network: sets ROS_DOMAIN_ID and RMW_IMPLEMENTATION (they must match the Create 3's),
 #      saves them in ~/.config/materialenbuddy/ros_net.env and loads them from ~/.bashrc (a marked block, once).
-#   3. Serial port permissions: dialout group + a udev rule with the /dev/ldlidar symlink.
+#   3. Serial port permissions: dialout group + a udev rule with the /dev/lidar symlink (and /dev/ldlidar).
 #   4. Installs the real robot's system dependencies with rosdep (not the simulation's).
 #
-# The LD19 driver (ldlidar_stl_ros2) is already in src/: nothing is cloned.
+# The LiDAR drivers (ldlidar_stl_ros2, sllidar_ros2) are already in src/: nothing is cloned.
 # Building is up to you; when it finishes, the script prints the command.
 #
 # Usage:  scripts/setup_pi.sh [--skip-udev] [--skip-net] [--domain-id N] [--rmw NAME]
-#   --skip-udev     do not add your user to dialout or install the udev rule (/dev/ldlidar will not exist:
+#   --skip-udev     do not add your user to dialout or install the udev rule (/dev/lidar will not exist:
 #                   pass the real port, e.g. lidar_port:=/dev/ttyUSB0)
 #   --skip-net      do not touch ROS_DOMAIN_ID / RMW_IMPLEMENTATION
 #   --domain-id N   ROS domain (default: $ROS_DOMAIN_ID if set, otherwise 0)
@@ -29,10 +29,10 @@ set -euo pipefail
 
 ROS_DISTRO_NAME="${ROS_DISTRO_NAME:-jazzy}"
 UDEV_RULE="/etc/udev/rules.d/99-ldlidar.rules"
-# CP2102 (the usual USB-serial chip of the LD19). Check it with `lsusb` and adjust if your adapter is another one.
+# CP2102 (USB-serial chip of the usual LiDAR adapters). Check it with `lsusb` and adjust if your adapter is another one.
 UDEV_VENDOR="10c4"
 UDEV_PRODUCT="ea60"
-UDEV_CONTENT="SUBSYSTEM==\"tty\", ATTRS{idVendor}==\"${UDEV_VENDOR}\", ATTRS{idProduct}==\"${UDEV_PRODUCT}\", SYMLINK+=\"ldlidar\", GROUP=\"dialout\", MODE=\"0660\""
+UDEV_CONTENT="SUBSYSTEM==\"tty\", ATTRS{idVendor}==\"${UDEV_VENDOR}\", ATTRS{idProduct}==\"${UDEV_PRODUCT}\", SYMLINK+=\"lidar ldlidar\", GROUP=\"dialout\", MODE=\"0660\""
 
 NET_DIR="${HOME}/.config/materialenbuddy"
 NET_FILE="${NET_DIR}/ros_net.env"
@@ -43,7 +43,7 @@ DOMAIN_ID="${ROS_DOMAIN_ID:-0}"
 RMW_NAME="${RMW_IMPLEMENTATION:-rmw_fastrtps_cpp}"
 
 # Real robot packages: rosdep only installs the dependencies of these (not the simulation's).
-REAL_ROBOT_PATHS=(src/mrobot_bringup src/irobot_create_description src/ldlidar_stl_ros2)
+REAL_ROBOT_PATHS=(src/mrobot_bringup src/irobot_create_description src/ldlidar_stl_ros2 src/sllidar_ros2)
 
 SKIP_UDEV=0
 SKIP_NET=0
@@ -124,7 +124,7 @@ else
 fi
 
 if [ "${SKIP_UDEV}" -eq 0 ]; then
-  log "Serial port permissions (dialout + udev /dev/ldlidar)"
+  log "Serial port permissions (dialout + udev /dev/lidar)"
   if ! id -nG "${USER}" | tr ' ' '\n' | grep -qx dialout; then
     sudo usermod -aG dialout "${USER}"
     echo "Added ${USER} to the dialout group: log out and back in for it to take effect."
@@ -133,7 +133,7 @@ if [ "${SKIP_UDEV}" -eq 0 ]; then
     printf '%s\n' "${UDEV_CONTENT}" | sudo tee "${UDEV_RULE}" >/dev/null
     sudo udevadm control --reload-rules
     sudo udevadm trigger
-    echo "udev rule installed in ${UDEV_RULE}. Reconnect the LiDAR; /dev/ldlidar should appear."
+    echo "udev rule installed in ${UDEV_RULE}. Reconnect the LiDAR; /dev/lidar should appear."
   fi
   if command -v lsusb >/dev/null 2>&1 && ! lsusb | grep -qi "${UDEV_VENDOR}:${UDEV_PRODUCT}"; then
     echo "WARNING: lsusb shows no ${UDEV_VENDOR}:${UDEV_PRODUCT} device (CP2102). With the LiDAR connected," >&2
@@ -153,10 +153,10 @@ Next steps:
   colcon build --symlink-install --parallel-workers 2 --packages-up-to mrobot_bringup
       # 2 workers so the Pi does not run out of RAM; --packages-up-to leaves the simulation out
   source ${REPO_ROOT}/install/setup.bash
-  ls -l /dev/ldlidar            # or /dev/ttyUSB0 if you do not use the udev rule
+  ls -l /dev/lidar              # or /dev/ttyUSB0 if you do not use the udev rule
   echo \$ROS_DOMAIN_ID \$RMW_IMPLEMENTATION   # they must match the Create 3's
   ros2 topic list | grep -E '/r2/(odom|cmd_vel)'   # check the Create 3 topics
-  ros2 launch mrobot_bringup mapping.launch.py lidar_port:=/dev/ldlidar
+  ros2 launch mrobot_bringup mapping.launch.py lidar_model:=rplidar_c1   # or ld19; or export LIDAR_MODEL
   # another robot without touching the environment: ... mapping.launch.py robot_namespace:=r3
 Namespace in this terminal: ${CREATE3_ROBOT_NAMESPACE-r2} (variable CREATE3_ROBOT_NAMESPACE, or 'r2' by default).
 The whole stack hangs from it: /r2/scan, /r2/map, /r2/cmd_vel... The Create 3 namespace is changed in its web UI.

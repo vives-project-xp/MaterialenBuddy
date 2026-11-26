@@ -16,6 +16,7 @@ This package mixes official iRobot files (unmodified) and the project's own file
 
 ## Own files (Apache-2.0)
 
-- `urdf/create3_ld19.urdf.xacro`: joins the Create 3 with the LD19 LiDAR.
+- `urdf/create3_lidar.urdf.xacro`: joins the Create 3 with the selected LiDAR (`lidar_model`).
+- `urdf/sensors/lidar_rplidar_c1.urdf.xacro`: SLAMTEC RPLIDAR C1 model.
 - `urdf/sensors/lidar_ld19.urdf.xacro`: LD19 macro with the datasheet values.
 - `launch/display.launch.py` and `rviz/`.

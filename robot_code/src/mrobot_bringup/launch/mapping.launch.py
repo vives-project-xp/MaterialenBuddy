@@ -1,4 +1,4 @@
-"""Real robot, mapping: hardware_base (robot_state_publisher + LD19 + relays) + slam_toolbox + RViz.
+"""Real robot, mapping: hardware_base (robot_state_publisher + LiDAR + relays) + slam_toolbox + RViz.
 
 The robot is moved with teleoperation:
     ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/r2/cmd_vel
@@ -6,7 +6,7 @@ Each include applies the namespace on its own, so this launch does NOT wrap them
 (see mrobot_namespace.py).
 
 Usage:
-    ros2 launch mrobot_bringup mapping.launch.py lidar_port:=/dev/ldlidar
+    ros2 launch mrobot_bringup mapping.launch.py lidar_model:=rplidar_c1
 """
 
 import os
@@ -19,6 +19,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+from lidar_profile import lidar_model_argument  # noqa: E402
 from mrobot_namespace import robot_namespace_argument  # noqa: E402
 
 
@@ -34,9 +35,8 @@ def generate_launch_description():
         launch_arguments={
             "robot_namespace": namespace,
             "use_sim_time": use_sim_time,
+            "lidar_model": LaunchConfiguration("lidar_model"),
             "lidar_port": LaunchConfiguration("lidar_port"),
-            "lidar_baudrate": LaunchConfiguration("lidar_baudrate"),
-            "laser_scan_dir": LaunchConfiguration("laser_scan_dir"),
             "laser_yaw": LaunchConfiguration("laser_yaw"),
         }.items(),
     )
@@ -48,6 +48,7 @@ def generate_launch_description():
             "robot_namespace": namespace,
             "use_sim_time": use_sim_time,
             "rviz": LaunchConfiguration("rviz"),
+            "lidar_model": LaunchConfiguration("lidar_model"),
         }.items(),
     )
 
@@ -57,16 +58,11 @@ def generate_launch_description():
             DeclareLaunchArgument("use_sim_time", default_value="false"),
             DeclareLaunchArgument(
                 "rviz", default_value="true", description="true|false"),
+            lidar_model_argument(),
             DeclareLaunchArgument(
-                "lidar_port",
-                default_value="/dev/ttyUSB0",
-                description="LD19 serial port; e.g. /dev/ldlidar.",
-            ),
-            DeclareLaunchArgument("lidar_baudrate", default_value="230400"),
+                "lidar_port", default_value="", description="Empty = the profile value (/dev/lidar)."),
             DeclareLaunchArgument(
-                "laser_scan_dir", default_value="true", description="true|false"),
-            DeclareLaunchArgument(
-                "laser_yaw", default_value="0.0", description="LD19 rotation (rad)."),
+                "laser_yaw", default_value="", description="LiDAR rotation (rad). Empty = the profile value."),
             hardware,
             slam,
         ]

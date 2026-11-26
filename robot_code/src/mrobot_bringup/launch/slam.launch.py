@@ -3,6 +3,7 @@
 Included by `mapping.launch.py` (real robot) and by the simulation.
 
 Arguments: robot_namespace (env CREATE3_ROBOT_NAMESPACE or 'r2'; empty = none), use_sim_time (false),
+lidar_model (env LIDAR_MODEL or 'ld19'),
 rviz (true), posegraph ('' = start an empty map; otherwise the path WITHOUT extension of a saved
 .posegraph/.data pair: slam_toolbox loads it and keeps extending it), initial_x / initial_y / initial_yaw
 (robot pose in that map when it is loaded; 0 0 0 = the map origin).
@@ -36,6 +37,7 @@ from launch_ros.events.lifecycle import ChangeState
 from lifecycle_msgs.msg import Transition
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+from lidar_profile import lidar_model_argument, load_lidar_profile  # noqa: E402
 from mrobot_namespace import (  # noqa: E402
     namespaced,
     resolve_namespace,
@@ -55,6 +57,11 @@ def _setup(context, *args, **kwargs):
         pkg, "config", "slam_params.yaml"), namespace)
 
     tf_remaps = tf_remappings(namespace)
+
+    # The LiDAR ranges come from the profile and override slam_params.yaml.
+    _, profile = load_lidar_profile(context)
+    lidar_ranges = {"min_laser_range": float(profile["min_range"]),
+                    "max_laser_range": float(profile["max_range"])}
 
     # slam_toolbox publishes /map and /map_metadata with an ABSOLUTE name, so PushRosNamespace
     # does not move them under /r2: they have to be remapped by hand (only when there is a namespace).
@@ -84,7 +91,7 @@ def _setup(context, *args, **kwargs):
         name="slam_toolbox",
         namespace="",
         output="screen",
-        parameters=[slam_yaml, {"use_sim_time": use_sim_time}, extra],
+        parameters=[slam_yaml, {"use_sim_time": use_sim_time, **lidar_ranges}, extra],
         remappings=slam_remaps,
     )
 
@@ -134,6 +141,7 @@ def generate_launch_description():
     return LaunchDescription(
         [
             robot_namespace_argument(),
+            lidar_model_argument(),
             DeclareLaunchArgument("use_sim_time", default_value="false"),
             DeclareLaunchArgument(
                 "rviz", default_value="true", description="true|false"),
