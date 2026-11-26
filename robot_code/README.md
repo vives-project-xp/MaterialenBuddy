@@ -48,7 +48,7 @@ The whole stack hangs from the robot namespace (`/r2/scan`, `/r2/map`...). It is
 ## Requirements
 
 - Ubuntu with **ROS 2 Jazzy**, `git`, `colcon` and `rosdep`.
-- For the simulation (on a PC): `ros-jazzy-ros-gz`, `ros-jazzy-gz-ros2-control` and `ros-jazzy-ros2-controllers`.
+- For the simulation (on a PC): see [Simulation](#simulation-on-a-pc).
 
 ## Installation on the Raspberry Pi
 
@@ -158,13 +158,78 @@ arguments or `set_initial_pose:=false` and use **2D Pose Estimate** in RViz.
 
 ## Simulation (on a PC)
 
+No Create 3, Raspberry Pi or physical LiDAR is needed: both the robot and the LiDAR are simulated.
+
+### Required software
+
+| Software | Package | What for |
+| --- | --- | --- |
+| **Ubuntu 24.04** | — | Base system for ROS 2 Jazzy |
+| **ROS 2 Jazzy** | `ros-jazzy-desktop` | ROS 2, including RViz |
+| **Gazebo Harmonic** | `ros-jazzy-ros-gz` | Simulator and ROS bridge (no separate Gazebo install needed) |
+| **Gazebo control** | `ros-jazzy-gz-ros2-control` | Connects `ros2_control` to the simulated robot |
+| **Controllers** | `ros-jazzy-ros2-controllers`, `ros-jazzy-controller-manager` | Drive the wheels and publish odometry |
+| **SLAM Toolbox** | `ros-jazzy-slam-toolbox` | Mapping |
+| **Nav2** | `ros-jazzy-navigation2`, `ros-jazzy-nav2-bringup` | Autonomous navigation |
+| **Robot model** | `ros-jazzy-xacro`, `ros-jazzy-robot-state-publisher` | Load the model and publish its transforms |
+| **Teleoperation** | `ros-jazzy-teleop-twist-keyboard` | Drive the robot with the keyboard |
+| **Tools** | `git`, `python3-colcon-common-extensions`, `python3-rosdep` | Get the code, install dependencies and build |
+
+On another Ubuntu version, you can use an Ubuntu 24.04 container, for example with distrobox:
+
 ```bash
+distrobox create --name jazzy --image ubuntu:24.04
+distrobox enter jazzy
+```
+
+### Installation
+
+First [set up the ROS 2 Jazzy apt repository](https://docs.ros.org/en/jazzy/Installation/Ubuntu-Install-Debs.html), then:
+
+```bash
+sudo apt update
+sudo apt install git ros-jazzy-desktop ros-jazzy-ros-gz ros-jazzy-gz-ros2-control \
+  ros-jazzy-ros2-controllers ros-jazzy-controller-manager ros-jazzy-slam-toolbox \
+  ros-jazzy-navigation2 ros-jazzy-nav2-bringup ros-jazzy-xacro \
+  ros-jazzy-robot-state-publisher ros-jazzy-teleop-twist-keyboard \
+  python3-colcon-common-extensions python3-rosdep
+```
+
+### Build
+
+From `robot_code/`:
+
+```bash
+source /opt/ros/jazzy/setup.bash
+sudo rosdep init                          # first time only
+rosdep update
 rosdep install --from-paths src --ignore-src -y
-colcon build --symlink-install
+colcon build --symlink-install --packages-select irobot_create_description irobot_create_control mrobot_bringup mrobot_simulation
 source install/setup.bash
+```
+
+Only these four packages are needed. The LiDAR drivers (`ldlidar_stl_ros2`, `sllidar_ros2`) are for the real robot.
+
+### Run
+
+In every new terminal (inside the container, if you use one), from `robot_code/`:
+
+```bash
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+```
+
+Map the world:
+
+```bash
 ros2 launch mrobot_simulation sim.launch.py                              # map
 ros2 run teleop_twist_keyboard teleop_twist_keyboard                     # in another terminal
-scripts/save_map.sh room --namespace ''                                  # the simulation does not use a namespace
+scripts/save_map.sh room --namespace ''                                  # in a third one; the simulation does not use a namespace
+```
+
+Then close the mapping simulation and navigate on the saved map:
+
+```bash
 ros2 launch mrobot_simulation sim.launch.py nav:=true map_yaml:=$PWD/maps/room.yaml
 ```
 
