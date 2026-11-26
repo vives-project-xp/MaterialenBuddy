@@ -2,7 +2,7 @@
 
 ## Aanmelden en rollen
 
-De webapp gebruikt nu Authentik. Volg eerst [AUTHENTIK.md](AUTHENTIK.md) voor
+De webapp gebruikt nu Authentik. Volg eerst [de Authentik-handleiding](../documentatie/authentik-installatie.md) voor
 installatie, accounts, groepen en de verplichte `.env`-instellingen.
 Maak een apart adminaccount; nieuwe bezoekers registreren zichzelf via het
 Authentik-inlogscherm en worden via de enrollment flow automatisch user.
@@ -103,7 +103,7 @@ Het wachtwoord hoort alleen lokaal in `.env` te staan. Deel dit bestand niet en 
 
 ## Installatie
 
-Open PowerShell in de map `research/website materialenbuddy/webapp`:
+Open PowerShell in de map `research/website/prototype/webapp`:
 
 ```powershell
 python -m venv .venv
@@ -115,7 +115,7 @@ python -m venv .venv
 Voer dit uit vanuit de hoofdmap van de repository:
 
 ```powershell
-cd "research\website materialenbuddy\webapp"
+cd "research\website\prototype\webapp"
 .\.venv\Scripts\python.exe -m uvicorn server:app --host 127.0.0.1 --port 8000
 ```
 
@@ -132,7 +132,7 @@ De terminal moet open blijven zolang de website draait. Stop de server met `Ctrl
 Docker start automatisch zowel MySQL als de FastAPI-webapp. Voer dit uit vanuit de hoofdmap van de repository:
 
 ```powershell
-cd "research\website materialenbuddy\webapp"
+cd "research\website\prototype\webapp"
 docker compose up --build
 ```
 

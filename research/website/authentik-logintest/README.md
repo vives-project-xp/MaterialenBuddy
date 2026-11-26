@@ -25,7 +25,7 @@ Een VM was voor deze lokale test niet nodig.
 
 ## 3. Eerste HTML-website
 
-We maakten de map `authentik-test` met een `index.html`:
+We maakten de map `html-testwebsite` met een `index.html`:
 
 ```html
 <!DOCTYPE html>
@@ -46,7 +46,7 @@ Eerst testten we de pagina rechtstreeks in de browser (eventueel met Live Server
 
 ## 4. Website met Docker en Nginx
 
-In `authentik-test/compose.yaml` startten we een Nginx-container. De eerste versie was:
+In `html-testwebsite/compose.yaml` startten we een Nginx-container. De eerste versie was:
 
 ```yaml
 services:
@@ -108,19 +108,19 @@ De beheerinterface was bereikbaar via `http://localhost:9000`. De eerste configu
 
 **Screenshots uit het oorspronkelijke Word-document:**
 
-![Overzicht applicaties in authentik](images/01_applicatie_aanmaken.png)
+![Overzicht applicaties in authentik](screenshots/01_applicatie_aanmaken.png)
 
-![Applicatienaam en slug invullen](images/02_applicatienaam_en_slug.png)
+![Applicatienaam en slug invullen](screenshots/02_applicatienaam_en_slug.png)
 
-![Proxy Provider selecteren](images/03_proxy_provider_kiezen.png)
+![Proxy Provider selecteren](screenshots/03_proxy_provider_kiezen.png)
 
-![Proxy Provider configureren](images/04_proxy_provider_configureren.png)
+![Proxy Provider configureren](screenshots/04_proxy_provider_configureren.png)
 
-![Interne host en tokengeldigheid](images/05_interne_host_en_token.png)
+![Interne host en tokengeldigheid](screenshots/05_interne_host_en_token.png)
 
-![Bindings voor de eerste applicatie](images/06_bindings_eerste_applicatie.png)
+![Bindings voor de eerste applicatie](screenshots/06_bindings_eerste_applicatie.png)
 
-![Aangemaakte HTML-testapplicatie](images/07_applicatie_aangemaakt.png)
+![Aangemaakte HTML-testapplicatie](screenshots/07_applicatie_aangemaakt.png)
 
 
 In de authentik-beheerinterface maakten we een nieuwe applicatie met een **Proxy Provider**.
@@ -143,13 +143,13 @@ Bij de eerste applicatie lieten we de extra bindings leeg: ingelogde gebruikers 
 
 **Screenshots uit het oorspronkelijke Word-document:**
 
-![Embedded Outpost in de lijst](images/08_embedded_outpost_overzicht.png)
+![Embedded Outpost in de lijst](screenshots/08_embedded_outpost_overzicht.png)
 
-![Details van de Embedded Outpost](images/09_embedded_outpost_details.png)
+![Details van de Embedded Outpost](screenshots/09_embedded_outpost_details.png)
 
-![Applicatie koppelen aan de outpost](images/10_outpost_applicatie_koppelen.png)
+![Applicatie koppelen aan de outpost](screenshots/10_outpost_applicatie_koppelen.png)
 
-![Provider gekoppeld aan de outpost](images/11_outpost_provider_gekoppeld.png)
+![Provider gekoppeld aan de outpost](screenshots/11_outpost_provider_gekoppeld.png)
 
 
 Via **Applicaties → Buitenposten → authentik Embedded Outpost → Bewerken** voegden we de applicatie `HTML Test Website` toe aan de geselecteerde applicaties.
@@ -175,11 +175,11 @@ We hebben vervolgens in een incognitovenster het inlogproces getest. De authenti
 
 **Screenshots uit het oorspronkelijke Word-document:**
 
-![Type gebruiker kiezen](images/12_gebruiker_type_kiezen.png)
+![Type gebruiker kiezen](screenshots/12_gebruiker_type_kiezen.png)
 
-![Gebruikersgegevens invullen](images/13_gebruiker_gegevens.png)
+![Gebruikersgegevens invullen](screenshots/13_gebruiker_gegevens.png)
 
-![Overzicht van gebruikers](images/14_gebruikers_overzicht.png)
+![Overzicht van gebruikers](screenshots/14_gebruikers_overzicht.png)
 
 
 We gebruikten twee accounts:
@@ -197,7 +197,7 @@ De gewone gebruiker werd via **Map → Gebruikers** aangemaakt als *Internal Use
 
 **Screenshots uit het oorspronkelijke Word-document:**
 
-![Overzicht van groepen](images/15_groepen_overzicht.png)
+![Overzicht van groepen](screenshots/15_groepen_overzicht.png)
 
 
 Via **Map → Groepen** maakten we de groep `website-admins` aan.
@@ -212,9 +212,9 @@ Dit was de basis om toegangsrechten per groep in te stellen.
 
 **Screenshots uit het oorspronkelijke Word-document:**
 
-![Binding toevoegen aan adminapplicatie](images/16_admin_binding_toevoegen.png)
+![Binding toevoegen aan adminapplicatie](screenshots/16_admin_binding_toevoegen.png)
 
-![Bindinginstellingen voor de adminapplicatie](images/17_admin_binding_instellingen.png)
+![Bindinginstellingen voor de adminapplicatie](screenshots/17_admin_binding_instellingen.png)
 
 
 We maakten een eenvoudige `admin.html` met de tekst **Welkom, administrator!**. Vervolgens onderzochten we hoe we die pagina alleen voor admins bereikbaar konden maken.
@@ -305,8 +305,8 @@ Dat is een toekomstige uitbreiding, geen onderdeel dat al werkt.
 
 Bewaar minstens:
 
-- [`index.html`](authentik-test/index.html) en [`admin.html`](authentik-test/admin.html) van de testwebsite.
-- De **actuele** [`compose.yaml` van de testwebsite](authentik-test/compose.yaml).
+- [`index.html`](html-testwebsite/index.html) en [`admin.html`](html-testwebsite/admin.html) van de testwebsite.
+- De **actuele** [`compose.yaml` van de testwebsite](html-testwebsite/compose.yaml).
 - De **actuele** [`compose.yml` van de Authentik-server](authentik-server/compose.yml).
 - Een voorbeeldbestand `.env.example` **zonder echte wachtwoorden of sleutels**.
 - De ingestelde authentik-applicaties, providers, groepsbindingen en outpostkoppelingen (eventueel met screenshots of een veilige export).

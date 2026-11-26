@@ -1,3 +1,0 @@
-fastapi
-uvicorn[standard]
-irobot-edu-sdk

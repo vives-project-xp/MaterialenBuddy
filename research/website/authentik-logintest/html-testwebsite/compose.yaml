@@ -1,3 +1,5 @@
+name: authentik-test
+
 services:
   website:
     image: nginx:alpine

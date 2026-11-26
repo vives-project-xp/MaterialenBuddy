@@ -4,7 +4,7 @@ De officiële `compose.yml` en een `.env` met unieke willekeurige geheimen staan
 klaar. Deel het `.env`-bestand niet. De bestaande `.gitignore` sluit het uit.
 
 1. Start Docker Desktop en wacht tot Docker draait.
-2. Open een terminal in deze map (`authentik`).
+2. Open een terminal in deze map (`authentik-server`).
 3. Start Authentik:
 
    ```powershell
@@ -12,7 +12,7 @@ klaar. Deel het `.env`-bestand niet. De bestaande `.gitignore` sluit het uit.
    ```
 
 4. Open http://localhost:9000 en voltooi de eerste configuratie voor `akadmin`.
-5. Volg daarna [de koppelinstructies](../webapp/AUTHENTIK.md), vanaf onderdeel 2:
+5. Volg daarna [de koppelinstructies](../documentatie/authentik-installatie.md), vanaf onderdeel 2:
    maak de groepen, het aparte MaterialenBuddy-adminaccount, de registratieflow
    die nieuwe accounts automatisch user maakt, en de application/provider.
 6. Vul de providergegevens in `webapp/.env` in en start de webapp opnieuw.
