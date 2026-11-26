@@ -53,7 +53,10 @@ AUTHENTIK_END_SESSION_URL = (
     AUTHENTIK_ISSUER.rstrip("/")
     + f"/application/o/{AUTHENTIK_CLIENT_ID}/end-session/"
 )
-POST_LOGOUT_REDIRECT_URI = "http://localhost:8000/"
+# Na de logout gaat de browser terug naar deze URL. Browser-gericht: lokaal
+# is dat localhost, op de VM de publieke URL (via WEBAPP_PUBLIC_URL).
+WEBAPP_PUBLIC_URL = os.getenv("WEBAPP_PUBLIC_URL", "http://localhost:8000").rstrip("/")
+POST_LOGOUT_REDIRECT_URI = f"{WEBAPP_PUBLIC_URL}/"
 
 
 def _b64url_decode(value: str) -> bytes:

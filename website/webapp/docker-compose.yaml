@@ -31,6 +31,9 @@ services:
       AUTHENTIK_CLIENT_SECRET: ${AUTHENTIK_CLIENT_SECRET:-}
       # Redirect-URI: de URL waarmee de BROWSER naar de webapp terugkeert (blijft op localhost).
       AUTHENTIK_REDIRECT_URI: ${AUTHENTIK_REDIRECT_URI:-http://localhost:8000/auth/callback}
+      # Publieke URL van de webapp voor de browser (naamloos na logout, enz.).
+      # Lokaal: http://localhost:8000; op de VM: bijv. http://10.20.233.15:8000.
+      WEBAPP_PUBLIC_URL: ${WEBAPP_PUBLIC_URL:-http://localhost:8000}
       SESSION_SECRET: ${SESSION_SECRET:-}
       SESSION_MAX_AGE_SECONDS: ${SESSION_MAX_AGE_SECONDS:-28800}
     ports:

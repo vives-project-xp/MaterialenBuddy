@@ -67,6 +67,14 @@
       font-size: 14px;
     }
 
+    .herstelknop {
+      width: auto;
+      margin: 0;
+      padding: 6px 10px;
+      background: #1769aa;
+      font-size: 14px;
+    }
+
     .invoerrij {
       display: grid;
       grid-template-columns: 1fr 110px;
@@ -668,6 +676,39 @@
       }
     }
 
+    async function herstelMedicijn(medicijnId, naam) {
+      const bevestig = window.confirm(
+        `Weet je zeker dat je "${naam}" opnieuw wilt toevoegen aan de voorraad?`
+      );
+      if (!bevestig) {
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          `/medicijnen/${medicijnId}/herstel`,
+          { method: "POST" }
+        );
+        if (verwerk401(response)) {
+          return;
+        }
+        if (response.status === 403) {
+          beheerStatus.textContent = "Alleen staff-leden kunnen producten terugtoevoegen.";
+          return;
+        }
+        if (response.ok) {
+          beheerStatus.textContent = `Product "${naam}" is terug toegevoegd aan de voorraad.`;
+          await laadVoorraad();
+          await laadUitgefaseerde();
+        } else {
+          const fout = await response.json().catch(() => ({ detail: "Onbekende fout." }));
+          beheerStatus.textContent = fout.detail || "Terugtoevoegen is niet geslaagd.";
+        }
+      } catch (error) {
+        beheerStatus.textContent = "Onbekende fout bij het terugtoevoegen.";
+      }
+    }
+
     // Toont de uitgefaseerde producten (alleen staff).
     async function laadUitgefaseerde() {
       if (!isStaff) {
@@ -695,7 +736,15 @@
           rij.className = "voorraaditem";
           const naam = document.createElement("span");
           naam.textContent = item.naam;
-          rij.append(naam);
+          const herstelKnop = document.createElement("button");
+          herstelKnop.type = "button";
+          herstelKnop.className = "herstelknop";
+          herstelKnop.textContent = "Terug toevoegen";
+          herstelKnop.dataset.medicijnId = item.id;
+          herstelKnop.addEventListener("click", function () {
+            herstelMedicijn(item.id, item.naam);
+          });
+          rij.append(naam, herstelKnop);
           uitgefaseerdLijst.appendChild(rij);
         });
       } catch (error) {

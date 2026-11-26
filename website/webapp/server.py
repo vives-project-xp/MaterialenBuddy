@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import IntegrityError
 
 import auth
 
@@ -177,45 +178,51 @@ def medicijn_toevoegen(
     sessie: dict[str, Any] = Depends(auth.require_staff),
 ) -> dict[str, Any]:
     """Voegt een nieuw voorraadproduct toe (staff-only)."""
-    with engine.begin() as connection:
-        resultaat = connection.execute(
-            text(
-                """
-                INSERT INTO medicijnen (naam, minimum_voorraad, actief)
-                VALUES (:naam, :minimum_voorraad, TRUE)
-                """
-            ),
-            {
-                "naam": medicijn.naam.strip(),
-                "minimum_voorraad": medicijn.minimum_voorraad,
-            },
-        )
-        medicijn_id = resultaat.lastrowid
-
-        if medicijn.voorraad > 0:
-            connection.execute(
+    try:
+        with engine.begin() as connection:
+            resultaat = connection.execute(
                 text(
                     """
-                    INSERT INTO voorraad (medicijn_id, aantal)
-                    VALUES (:medicijn_id, :aantal)
-                    """
-                ),
-                {"medicijn_id": medicijn_id, "aantal": medicijn.voorraad},
-            )
-            connection.execute(
-                text(
-                    """
-                    INSERT INTO voorraad_mutaties
-                        (medicijn_id, verschil, reden)
-                    VALUES (:medicijn_id, :verschil, :reden)
+                    INSERT INTO medicijnen (naam, minimum_voorraad, actief)
+                    VALUES (:naam, :minimum_voorraad, TRUE)
                     """
                 ),
                 {
-                    "medicijn_id": medicijn_id,
-                    "verschil": medicijn.voorraad,
-                    "reden": "Voorraad geïnitieerd bij aanmaak",
+                    "naam": medicijn.naam.strip(),
+                    "minimum_voorraad": medicijn.minimum_voorraad,
                 },
             )
+            medicijn_id = resultaat.lastrowid
+
+            if medicijn.voorraad > 0:
+                connection.execute(
+                    text(
+                        """
+                        INSERT INTO voorraad (medicijn_id, aantal)
+                        VALUES (:medicijn_id, :aantal)
+                        """
+                    ),
+                    {"medicijn_id": medicijn_id, "aantal": medicijn.voorraad},
+                )
+                connection.execute(
+                    text(
+                        """
+                        INSERT INTO voorraad_mutaties
+                            (medicijn_id, verschil, reden)
+                        VALUES (:medicijn_id, :verschil, :reden)
+                        """
+                    ),
+                    {
+                        "medicijn_id": medicijn_id,
+                        "verschil": medicijn.voorraad,
+                        "reden": "Voorraad geïnitieerd bij aanmaak",
+                    },
+                )
+    except IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="Een product met die naam bestaat al.",
+        )
 
     return {
         "naam": medicijn.naam.strip(),
@@ -242,6 +249,35 @@ def medicijn_uitfaseren(
         if resultaat.rowcount == 0:
             raise HTTPException(status_code=404, detail="Medicijn niet gevonden")
     return {"medicijn_id": medicijn_id, "actief": False}
+
+
+@app.post("/medicijnen/{medicijn_id}/herstel")
+def medicijn_herstellen(
+    medicijn_id: int,
+    sessie: dict[str, Any] = Depends(auth.require_staff),
+) -> dict[str, Any]:
+    """Brengt een uitgefaseerd product opnieuw terug in de voorraad (staff-only)."""
+    with engine.begin() as connection:
+        resultaat = connection.execute(
+            text(
+                """
+                UPDATE medicijnen
+                SET actief = TRUE
+                WHERE id = :id AND actief = FALSE
+                """
+            ),
+            {"id": medicijn_id},
+        )
+        if resultaat.rowcount == 0:
+            row = connection.execute(
+                text("SELECT actief FROM medicijnen WHERE id = :id"),
+                {"id": medicijn_id},
+            ).mappings().first()
+            if row is None:
+                raise HTTPException(status_code=404, detail="Medicijn niet gevonden")
+            if row["actief"]:
+                raise HTTPException(status_code=400, detail="Medicijn is al actief")
+    return {"medicijn_id": medicijn_id, "actief": True}
 
 
 @app.get("/medicijnen/uitgefaseerd")
