@@ -12,7 +12,10 @@ This package mixes official iRobot files (unmodified) and the project's own file
   - `urdf/create3.urdf.xacro`, `bumper`, `button`, `caster`, `common_properties`, `wheel`, `wheel_drop`
     and `wheel_with_wheeldrop` (`*.urdf.xacro`).
   - `urdf/dock/` and `urdf/sensors/`, except `lidar_ld19.urdf.xacro`.
-- **Modifications:** none. If an official file is ever edited, note it here.
+- **Modifications** (note here any further edit to an official file):
+  - `urdf/wheel_drop.urdf.xacro`: the wheel-drop joint is `fixed` instead of `prismatic`, and its Gazebo spring
+    settings were removed.
+  - `urdf/create3.urdf.xacro`: the Gazebo `Sensors` system plugin was removed (the world loads it).
 
 ## Own files (Apache-2.0)
 
