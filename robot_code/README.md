@@ -435,31 +435,6 @@ starting point as when you made the map.
 Other arguments: `headless:=true` (no Gazebo GUI), `x`, `y`, `yaw` (initial pose) and `world` (another `.sdf` world).
 The default world is an 8x8 m room with a divider wall and obstacles.
 
-## Things that are not obvious
-
-- **`scan_resampler`**: the number of readings per revolution of the driver can differ from the profile (the LD19 varies between
-  ~500 and 504), and `slam_toolbox` requires a fixed number. The node publishes `scan` with the profile's `num_beams`, taken from `scan_raw`. It is not needed in simulation.
-- **`odom_relay`**: the Create 3 publishes `odom` with *best effort* QoS and Nav2 asks for *reliable*; the node republishes it on
-  `odom_reliable`. Real robot only.
-- **`cmd_vel_stamper`**: Jazzy's `diff_drive_controller` receives `TwistStamped`, but the teleop and Nav2 publish
-  `Twist`. Simulation only.
-- **`irobot_create_control`**: the official URDF references it when `gazebo:=ignition` is used. It is only needed in simulation.
-- **The Pi's model includes the full Create 3 URDF**, not a minimal one. The Create 3 also publishes its own frames:
-  check that there are no duplicate transforms (`ros2 topic echo /r2/tf_static`).
-
-## Troubleshooting
-
-Places where something is most likely to need adjusting:
-
-- **Model (PC):** `ros2 launch irobot_create_description display.launch.py`. `rviz/model.rviz` still has to be created from RViz.
-- **LiDAR driver build and serial port:** `ls -l /dev/lidar`; if it does not exist, run `lsusb` and check the udev rule identifier.
-- **The scan comes out rotated or mirrored:** adjust `laser_yaw`; for mirroring, `laser_scan_dir` (LD19) or `inverted`
-  (RPLIDAR) in the LiDAR profile.
-- **`slam_toolbox` does not activate:** it is a lifecycle node; the launch configures and activates it. Check `ros2 lifecycle get /r2/slam_toolbox`.
-- **The `.rviz` files** are written by hand: if something is not visible, adjust it in RViz and save the configuration.
-- **Simulation:** that the *spawners* do not time out while the meshes load, that `/odom`, `/tf` and
-  `/joint_states` exist, and that the meshes are found (`GZ_SIM_RESOURCE_PATH`).
-
 ## Third-party code and licenses
 
 | Package | Origin | License |
